@@ -1,0 +1,19 @@
+{
+  "$schema": "./entity-state-ledger.schema.json",
+  "version": 1,
+  "canonVersion": "UNINITIALIZED",
+  "chapterOrdinal": 0,
+  "currentScene": {
+    "locationId": null,
+    "presentCharacterIds": []
+  },
+  "locations": [],
+  "characters": [],
+  "items": [],
+  "sources": [],
+  "knowledge": [],
+  "relationships": [],
+  "moneyAccounts": [],
+  "healthConditions": [],
+  "foreshadows": []
+}

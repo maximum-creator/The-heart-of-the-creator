@@ -7,19 +7,21 @@
 ## 快速开始
 
 1. 下载或克隆本仓库。
-2. 在 FeelFish 中把仓库根目录作为“小说项目”打开。
-3. 选择自定义方案 `NovelOS 番茄超级写作者`，主智能体应为 `NovelOS 总导演`。
-4. 新书先让总导演执行“立项”，填写 `NovelOS/01-market/reader-contract.md`；随后可以直接要求它完成总纲、前三章设计或单章生产。
-5. 如需本地确定性工具，把 `NovelOS/tools/mcp-server/mcp-config.template.json` 中的 `<PROJECT_ROOT>` 替换为本仓库绝对路径后，在 FeelFish 的 MCP/工具设置中添加。只把这组工具授予 `novelos-tool-operator`。
+2. 在 Windows PowerShell 运行 `powershell -ExecutionPolicy Bypass -File .\scripts\initialize-novelos.ps1`。脚本会校验结构、同步模型路由并生成本地 MCP 配置，全程不会调用付费模型；只检查可使用 `-CheckOnly`。
+3. 在 FeelFish 中把仓库根目录作为“小说项目”打开。
+4. 选择自定义方案 `NovelOS 番茄超级写作者`，主智能体应为 `NovelOS 总导演`。
+5. 新书先让总导演执行“立项”，填写 `NovelOS/01-market/reader-contract.md`；随后可以直接要求它完成总纲、前三章设计或单章生产。首次演练可参考 `examples/minimal-run/`。
+6. 如需本地确定性工具，在 FeelFish 的 MCP/工具设置中添加初始化脚本生成的 `NovelOS/tools/mcp-server/mcp-config.local.json`。只把这组工具授予 `novelos-tool-operator`。
 
 配置文件：
 
 - 当前模型覆盖：`.feelfish/solution.json`
 - 可导入方案：`.feelfish/solutions/feelfish-custom.json`
+- 模型路由唯一来源：`NovelOS/00-control/capability-model-map.json`
 - 11 个 Agent：`.feelfish/agents/`
 - Skills：`.feelfish/skills/`
 - 小说工程状态：`NovelOS/`
-- 七个受限 MCP 工具：`NovelOS/tools/mcp-server/`
+- 八个受限 MCP 工具：`NovelOS/tools/mcp-server/`
 
 ## 生产模型路由
 
@@ -37,7 +39,11 @@
 | 工具操作员 | DeepSeek V4 Flash | 关 | 0.05 | token-economy |
 | 研究编辑 | DeepSeek V4 Pro | high | 模型默认 | evidence-research |
 
-路由原则见 `NovelOS/00-control/model-routing.md`。正文作者不挂工具或 MCP，只接收闭合的最小 Chapter Packet，一章只生成一版。联网、考据和 MCP 都由总导演在出现真实缺口时临时启用。
+路由原则见 `NovelOS/00-control/model-routing.md`。具体模型、思考档位和温度统一维护在 `NovelOS/00-control/capability-model-map.json`，修改后运行 `node NovelOS/tools/config/sync-model-routing.mjs --write` 投影到 FeelFish 配置。正文作者不挂工具或 MCP，只接收闭合的最小 Chapter Packet，一章只生成一版。联网、考据和 MCP 都由总导演在出现真实缺口时临时启用。
+
+## 长篇状态与连续性
+
+`NovelOS/04-canon/entity-state-ledger.json` 是人物位置与在场、物品归属、信息来源、金钱、伤病恢复和伏笔期限的机器事实源。`novelos_state_audit` 在写作前后执行确定性审计，`render-state-ledger.mjs` 再生成人可读视图。审计只标记需要复核的位置，不把句式、情感或所谓“人味”变成僵硬 KPI，也不会擅自改剧情。
 
 ## 默认工作模式
 

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/maximum-creator/The-heart-of-the-creator/NovelOS/04-canon/entity-state-ledger.schema.json",
+  "title": "NovelOS Entity State Ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "canonVersion", "chapterOrdinal", "currentScene", "locations", "characters", "items", "sources", "knowledge", "relationships", "moneyAccounts", "healthConditions", "foreshadows"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "canonVersion": { "type": "string", "minLength": 1 },
+    "chapterOrdinal": { "type": "integer", "minimum": 0 },
+    "currentScene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locationId", "presentCharacterIds"],
+      "properties": {
+        "locationId": { "type": ["string", "null"] },
+        "presentCharacterIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "locations": { "$ref": "#/$defs/locations" },
+    "characters": { "$ref": "#/$defs/characters" },
+    "items": { "$ref": "#/$defs/items" },
+    "sources": { "$ref": "#/$defs/sources" },
+    "knowledge": { "$ref": "#/$defs/knowledge" },
+    "relationships": { "$ref": "#/$defs/relationships" },
+    "moneyAccounts": { "$ref": "#/$defs/moneyAccounts" },
+    "healthConditions": { "$ref": "#/$defs/healthConditions" },
+    "foreshadows": { "$ref": "#/$defs/foreshadows" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "evidence": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "locations": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "$ref": "#/$defs/id" }, "name": { "type": "string", "minLength": 1 }, "parentLocationId": { "type": ["string", "null"] } } }
+    },
+    "characters": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "name", "presence", "locationId"], "properties": { "id": { "$ref": "#/$defs/id" }, "name": { "type": "string", "minLength": 1 }, "presence": { "enum": ["PRESENT", "ABSENT", "UNKNOWN"] }, "locationId": { "type": ["string", "null"] }, "status": { "type": "string" }, "evidence": { "$ref": "#/$defs/evidence" } } }
+    },
+    "items": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "name", "holderId", "locationId", "status"], "properties": { "id": { "$ref": "#/$defs/id" }, "name": { "type": "string", "minLength": 1 }, "holderId": { "type": ["string", "null"] }, "locationId": { "type": ["string", "null"] }, "status": { "type": "string", "minLength": 1 }, "evidence": { "$ref": "#/$defs/evidence" } } }
+    },
+    "sources": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "type", "chapterOrdinal", "evidence"], "properties": { "id": { "$ref": "#/$defs/id" }, "type": { "type": "string", "minLength": 1 }, "chapterOrdinal": { "type": "integer", "minimum": 0 }, "evidence": { "$ref": "#/$defs/evidence" } } }
+    },
+    "knowledge": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "claim", "knownBy"], "properties": { "id": { "$ref": "#/$defs/id" }, "claim": { "type": "string", "minLength": 1 }, "knownBy": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["characterId", "sourceId"], "properties": { "characterId": { "$ref": "#/$defs/id" }, "sourceId": { "$ref": "#/$defs/id" } } } } } }
+    },
+    "relationships": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "fromCharacterId", "toCharacterId", "state", "evidence"], "properties": { "id": { "$ref": "#/$defs/id" }, "fromCharacterId": { "$ref": "#/$defs/id" }, "toCharacterId": { "$ref": "#/$defs/id" }, "state": { "type": "string", "minLength": 1 }, "evidence": { "$ref": "#/$defs/evidence" } } }
+    },
+    "moneyAccounts": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "ownerId", "currency", "openingBalance", "currentBalance", "changes"], "properties": { "id": { "$ref": "#/$defs/id" }, "ownerId": { "$ref": "#/$defs/id" }, "currency": { "type": "string", "minLength": 1 }, "openingBalance": { "type": "number" }, "currentBalance": { "type": "number" }, "changes": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id", "chapterOrdinal", "amount", "reason", "evidence"], "properties": { "id": { "$ref": "#/$defs/id" }, "chapterOrdinal": { "type": "integer", "minimum": 0 }, "amount": { "type": "number" }, "reason": { "type": "string", "minLength": 1 }, "evidence": { "$ref": "#/$defs/evidence" } } } } } }
+    },
+    "healthConditions": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "characterId", "status", "startChapter", "recoveryNotBeforeChapter", "recoveryRule"], "properties": { "id": { "$ref": "#/$defs/id" }, "characterId": { "$ref": "#/$defs/id" }, "status": { "enum": ["ACTIVE", "RESOLVED"] }, "startChapter": { "type": "integer", "minimum": 0 }, "recoveryNotBeforeChapter": { "type": "integer", "minimum": 0 }, "recoveryRule": { "type": "string", "minLength": 1 }, "resolvedChapter": { "type": "integer", "minimum": 0 }, "evidence": { "$ref": "#/$defs/evidence" } } }
+    },
+    "foreshadows": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "status", "firstChapter", "lastAdvancedChapter", "evidence"], "properties": { "id": { "$ref": "#/$defs/id" }, "status": { "enum": ["ACTIVE", "RESOLVED", "DROPPED"] }, "firstChapter": { "type": "integer", "minimum": 0 }, "lastAdvancedChapter": { "type": "integer", "minimum": 0 }, "nextAdvanceByChapter": { "type": "integer", "minimum": 0 }, "resolvedChapter": { "type": "integer", "minimum": 0 }, "evidence": { "$ref": "#/$defs/evidence" } } }
+    }
+  }
+}

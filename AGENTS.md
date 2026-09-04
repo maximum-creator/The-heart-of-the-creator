@@ -19,7 +19,7 @@
 5. 发散阶段不使用审稿规则压制创意；收敛阶段才检查事实、Canon、因果和商业目标。
 6. CALIBRATION 阶段未经用户批准的草稿不得进入正式 Canon；PILOT/PRODUCTION 阶段只有带完整哈希、成本、硬检、审稿和回滚证据的自动验收稿可以提交，模型自述不能代替回执。
 7. 只读够完成当前任务的最小上下文；需要扩大读取范围时先说明理由。
-8. NovelOS MCP 采用工具舱隔离：只有 `novelos-tool-operator` 挂载；其他 Agent 不得配置 `tools: all`。
+8. NovelOS MCP 采用工具舱隔离：只有 `novelos-tool-operator` 挂载八个受限工具；其他 Agent 不得配置 `tools: all`。
 9. 正文由 `novelos-prose-writer` 直接生成：只加载 `novelos-chapter-writing`，不挂工具或 MCP，一章一会话且只生成一版；失败不得自动重试或并行换模型。
 10. 运行前读取 `NovelOS/00-control/capability-switchboard.md`。不固定串联全部 Agent；正文的叙述与情感必须在人物发动机和场景因果中产生，不能在末端用辞藻润色补造。
 

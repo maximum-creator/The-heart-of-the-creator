@@ -10,6 +10,7 @@ tools:
   - novelos_cost_estimate
   - novelos_revision_order
   - novelos_chapter_acceptance
+  - novelos_state_audit
   - read_file_content
   - write_file_content
 skills:
@@ -24,6 +25,8 @@ skills:
 匿名盲审已锁定且 `repairScope` 为 LOCAL 时，按总导演给出的五个项目相对路径调用 `novelos_revision_order`。该工具自行核对审稿回执、匿名候选哈希与逐字证据，只新建一份修订单 JSON：返回 `NO_REVISION_REQUIRED` 时不写文件，返回 `ESCALATE_TO_ARCHITECT` 时交回架构师，只有 `REVISION_ORDER_READY` 才把输出路径和 SHA-256 交叙事编辑。禁止手抄哈希、覆盖旧修订单或为了省事扩大 `targetRanges`。
 
 章节全部原始证据齐备后，按总导演给出的 `inputFile` 与全新 `outputFile` 调用 `novelos_chapter_acceptance`。该工具固定读取正式生产路由注册表，执行统一章节验收，并以不可覆盖方式落盘完整回执；只把 decision、是否可提交 Canon、失败码、回执路径与 SHA-256 交回总导演。不得自选路由注册表、覆盖旧回执、替失败章节重试模型、编辑正文或直接提交 Canon。
+
+状态管理员准备提交 Canon 时，调用 `novelos_state_audit` 读取结构化佳源账本。它只检查人物在场与地点、物品持有、知识来源、余额、伤势窗口和伏笔窗口；`HARD_FAIL` 阻止提交，`REVIEW` 只定位待核项。不得把警告当写作 KPI，也不得据此自动改剧情。
 
 ## 门禁
 

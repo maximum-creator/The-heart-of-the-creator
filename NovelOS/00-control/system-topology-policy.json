@@ -2,16 +2,16 @@
   "version": 2,
   "feelFishSolution": { "schemaVersion": 1, "primaryAgentId": "novelos-director" },
   "agents": {
-    "novelos-director": { "modelName": "feelfish/gpt-5.6-luna", "maxStaticSkills": 2, "allowedMcpTools": [] },
-    "novelos-market-strategist": { "modelName": "feelfish/gpt-5.6-terra", "maxStaticSkills": 1, "allowedMcpTools": [] },
-    "novelos-story-architect": { "modelName": "feelfish/kimi-k3", "maxStaticSkills": 1, "allowedMcpTools": [] },
-    "novelos-chapter-architect": { "modelName": "feelfish/GLM-5.3-flash", "maxStaticSkills": 1, "allowedMcpTools": [] },
-    "novelos-character-director": { "modelName": "feelfish/kimi-k3", "maxStaticSkills": 1, "allowedMcpTools": [] },
-    "novelos-prose-writer": { "modelName": "feelfish/GLM-5.3", "maxStaticSkills": 1, "allowedMcpTools": [] },
-    "novelos-continuity-auditor": { "modelName": "feelfish/gpt-5.6-terra", "maxStaticSkills": 1, "allowedMcpTools": [] },
-    "novelos-narrative-editor": { "modelName": "feelfish/kimi-k3", "maxStaticSkills": 1, "allowedMcpTools": [] },
-    "novelos-state-curator": { "modelName": "feelfish/GLM-5.3-flash", "maxStaticSkills": 1, "allowedMcpTools": [] },
-    "novelos-tool-operator": { "modelName": "feelfish/deepseek-v4-flash", "maxStaticSkills": 1, "allowedMcpTools": ["novelos_project_snapshot", "novelos_context_pack", "novelos_repetition_scan", "novelos_fact_gaps", "novelos_cost_estimate", "novelos_revision_order", "novelos_chapter_acceptance"] },
-    "novelos-research-editor": { "modelName": "feelfish/deepseek-v4-pro", "maxStaticSkills": 1, "allowedMcpTools": [] }
+    "novelos-director": { "maxStaticSkills": 2, "allowedMcpTools": [] },
+    "novelos-market-strategist": { "maxStaticSkills": 1, "allowedMcpTools": [] },
+    "novelos-story-architect": { "maxStaticSkills": 1, "allowedMcpTools": [] },
+    "novelos-chapter-architect": { "maxStaticSkills": 1, "allowedMcpTools": [] },
+    "novelos-character-director": { "maxStaticSkills": 1, "allowedMcpTools": [] },
+    "novelos-prose-writer": { "maxStaticSkills": 1, "allowedMcpTools": [] },
+    "novelos-continuity-auditor": { "maxStaticSkills": 1, "allowedMcpTools": [] },
+    "novelos-narrative-editor": { "maxStaticSkills": 1, "allowedMcpTools": [] },
+    "novelos-state-curator": { "maxStaticSkills": 1, "allowedMcpTools": [] },
+    "novelos-tool-operator": { "maxStaticSkills": 1, "allowedMcpTools": ["novelos_project_snapshot", "novelos_context_pack", "novelos_repetition_scan", "novelos_fact_gaps", "novelos_cost_estimate", "novelos_revision_order", "novelos_chapter_acceptance", "novelos_state_audit"] },
+    "novelos-research-editor": { "maxStaticSkills": 1, "allowedMcpTools": [] }
   }
 }

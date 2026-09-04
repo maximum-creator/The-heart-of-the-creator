@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { runFactAudit } from "./fact-gateway.mjs";
 import { buildSurgicalRevisionOrder } from "../eval/build-surgical-revision-order.mjs";
 import { evaluateChapterAcceptance } from "../eval/chapter-acceptance-gate.mjs";
+import { auditEntityStateLedger } from "../eval/state-ledger-audit.mjs";
 
 const root = path.resolve(process.env.NOVELOS_PROJECT_ROOT || process.cwd());
 const blocked = [".git", "node_modules", ".feelfish/memory", "NovelOS_Backups"];
@@ -111,6 +112,18 @@ const tools = [
         maxCredits: { type: "number", minimum: 0 }
       },
       required: ["inputChars", "outputChars"],
+      additionalProperties: false
+    }
+  },
+  {
+    name: "novelos_state_audit",
+    description: "Cross-check the structured Canon ledger for presence, location, possession, knowledge sources, money balance, injury windows and overdue foreshadowing. It never scores prose or changes story state.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        ledgerFile: { type: "string", default: "NovelOS/04-canon/entity-state-ledger.json", description: "Project-relative JSON ledger under NovelOS/04-canon." },
+        outputFile: { type: "string", description: "Optional new immutable JSON receipt under records or NovelOS/09-evals." }
+      },
       additionalProperties: false
     }
   },
@@ -250,10 +263,15 @@ function costEstimate(args) {
     const autoPeak = billingWindow === "auto" && record.peakRule === "deepseek-weekday-cn" && autoDeepSeekPeak;
     const isPeak = Boolean(record.peakMultiplier && (forcePeak || autoPeak));
     const appliedMultiplier = isPeak ? record.peakMultiplier : 1;
+    const blended = Number(record.creditsPerToken);
+    const relativeMagnitude = Number.isFinite(blended) ? (blended <= 2 ? "LOW" : blended <= 20 ? "MEDIUM" : "HIGH") : "UNKNOWN";
     return {
       model: name,
       listedBlendedCreditsPerToken: record.creditsPerToken,
       appliedMultiplier,
+      relativeMagnitude,
+      magnitudeConfidence: "LOW",
+      magnitudeUse: "COMPARISON_ONLY_NOT_AUTHORIZATION",
       estimatedCredits: null,
       withinBudget: null,
       reason: "The local blended rate does not separate input, output, cache-hit and reasoning usage, so it cannot produce a defensible estimate."
@@ -276,6 +294,52 @@ function costEstimate(args) {
     unknownModels,
     nextAction: "先从 FeelFish 状态栏取得单次请求日志，记录模型、输入/输出/缓存/推理 token 与实际积分；费率分量可复核前保持付费调用关闭。"
   };
+}
+
+function stateLedgerInput(relativePath = "NovelOS/04-canon/entity-state-ledger.json") {
+  const raw = String(relativePath || "");
+  if (path.isAbsolute(raw) || path.win32.isAbsolute(raw) || raw.includes("\0")) throw new Error("State ledger must be a project-relative JSON path");
+  const normalized = raw.replace(/\\/g, "/").replace(/^\.\//u, "");
+  if (!normalized.startsWith("NovelOS/04-canon/") || path.extname(normalized).toLowerCase() !== ".json" || normalized.split("/").some(part => part.startsWith("."))) throw new Error("State ledger must stay under NovelOS/04-canon and use .json");
+  const file = safePath(normalized);
+  if (!fs.existsSync(file) || !fs.statSync(file).isFile() || isBlocked(file)) throw new Error(`State ledger does not exist: ${normalized}`);
+  const realRoot = fs.realpathSync(safePath("NovelOS/04-canon"));
+  const realFile = fs.realpathSync(file);
+  const prefix = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep;
+  if (!realFile.startsWith(prefix) || isBlocked(realFile)) throw new Error("State ledger escapes NovelOS/04-canon");
+  if (fs.statSync(realFile).size > 1000000) throw new Error("State ledger exceeds 1000000 bytes");
+  const source = fs.readFileSync(realFile, "utf8");
+  try {
+    return { normalized: relative(realFile), source, value: JSON.parse(source) };
+  } catch (error) {
+    throw new Error(`State ledger JSON parse failed: ${error.message}`);
+  }
+}
+
+function stateAudit(args) {
+  const input = stateLedgerInput(args.ledgerFile);
+  const report = auditEntityStateLedger(input.value);
+  const receipt = {
+    kind: "entity_state_audit",
+    version: 1,
+    createdAt: new Date().toISOString(),
+    input: { path: input.normalized, bytes: Buffer.byteLength(input.source, "utf8"), sha256: crypto.createHash("sha256").update(input.source, "utf8").digest("hex") },
+    checker: { name: "state-ledger-audit", sha256: crypto.createHash("sha256").update(fs.readFileSync(new URL("../eval/state-ledger-audit.mjs", import.meta.url))).digest("hex") },
+    ...report
+  };
+  if (!args.outputFile) return { ...receipt, output: null };
+  const output = acceptancePath(args.outputFile, "State audit output");
+  if (fs.existsSync(output.file)) throw new Error(`State audit output already exists: ${output.normalized}`);
+  const parent = path.dirname(output.file);
+  if (!fs.existsSync(parent) || !fs.statSync(parent).isDirectory()) throw new Error("State audit output parent does not exist");
+  const realRoot = fs.realpathSync(root);
+  const realParent = fs.realpathSync(parent);
+  const prefix = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep;
+  if (realParent !== realRoot && !realParent.startsWith(prefix)) throw new Error("State audit output escapes project root");
+  const serialized = `${JSON.stringify(receipt, null, 2)}\n`;
+  if (Buffer.byteLength(serialized, "utf8") > 500000) throw new Error("State audit receipt exceeds 500000 bytes");
+  fs.writeFileSync(output.file, serialized, { encoding: "utf8", flag: "wx" });
+  return { ...receipt, output: { path: output.normalized, sha256: crypto.createHash("sha256").update(serialized, "utf8").digest("hex") } };
 }
 
 function relativeEvalPath(relativePath, extensions) {
@@ -413,6 +477,7 @@ async function callTool(name, args) {
     return factGaps(args);
   }
   if (name === "novelos_cost_estimate") return costEstimate(args);
+  if (name === "novelos_state_audit") return stateAudit(args);
   if (name === "novelos_revision_order") return revisionOrder(args);
   if (name === "novelos_chapter_acceptance") return chapterAcceptance(args);
   throw new Error(`Unknown tool: ${name}`);
@@ -433,7 +498,7 @@ input.on("line", async (line) => {
   try { request = JSON.parse(line); } catch { return; }
   if (request.id === undefined) return;
   try {
-    if (request.method === "initialize") return reply(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "novelos-mcp", version: "0.6.0" } });
+    if (request.method === "initialize") return reply(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "novelos-mcp", version: "0.7.0" } });
     if (request.method === "tools/list") return reply(request.id, { tools });
     if (request.method === "tools/call") {
       const value = await callTool(request.params?.name, request.params?.arguments || {});

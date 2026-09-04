@@ -7,6 +7,7 @@
 - 成本预估：昂贵或多 Agent 任务前调用 `novelos_cost_estimate`。
 - 外科修订单：匿名盲审锁定且唯一主损失需要 LOCAL 返修时，调用 `novelos_revision_order`；它校验审稿/回执/候选三方哈希，只新建一份带目标范围与冻结范围的 JSON。NONE 不写文件，STRUCTURAL 退回架构师，禁止手抄回执或覆盖旧修订单。
 - 章节总验收：全部原始证据齐备后，仅由工具管理员调用 `novelos_chapter_acceptance`。输入、输出必须是 `records/` 或 `NovelOS/09-evals/` 下的项目相对 JSON；工具固定读取正式生产路由注册表，以不可覆盖方式写入完整回执，只返回决策、失败码、路径与哈希。它不调用模型、不自动重试、不改正文、不提交 Canon。
+- 状态一致性：状态管理员准备提交 Canon 时，由工具管理员调用 `novelos_state_audit` 读取 `NovelOS/04-canon/entity-state-ledger.json`。它确定性交叉检查人物在场/地点、物品、知识来源、余额、伤势和伏笔窗口，可选择只新建一份哈希回执；不评价文风、不自动修账本或推进剧情。
 - 项目内事实：优先文件读取、全文问答和语义搜索；外部最新市场或史实才使用互联网搜索。
 - 工具输出写入产物路径，子 Agent 只读产物摘要，不重复调用同一工具。
 
@@ -28,6 +29,7 @@
 | `NovelOS/tools/eval/raw-prose-delivery-audit.mjs` | 正文模型原始回复落盘后首先运行 | 阻断推理、自评、规则回声和包装层；禁止抽取清洗后冒充一次通过 |
 | `NovelOS/tools/eval/prose-candidate-gate.mjs` | 单次正文候选的最后统一入口 | 聚合原始交付、标点段落、叙事指纹、任务硬门、真实成本和重试证据；只有生产注册表达标后才允许自主提交状态 |
 | `NovelOS/tools/eval/transition-contract-audit.mjs` | 最终稿通过正文门、状态管理员准备提交差量时 | 对照章前最多3项状态边界，核验人物能动性、保护事实、未解决问题、最终稿哈希和原句证据；复用状态提取，不新增模型调用 |
+| `NovelOS/tools/eval/render-state-ledger.mjs` | `novelos_state_audit` 未返回 HARD_FAIL 后 | 从 JSON 佳源确定性生成 `entity-state-view.md`；视图可覆盖再生，但不得反向作为机器事实源 |
 | `NovelOS/tools/eval/chapter-acceptance-gate.mjs` | 所有单项门完成、准备进入声线确认、批次确认或正式 Canon 时 | 从同一运行目录重读并绑定预检、原始回复、最终稿、事实契约、转移契约、差量、路由、真实账单、一次授权和回滚点；本地重跑门禁，不新增模型调用；只允许已验证 PRODUCTION 路由自主提交 |
 | `NovelOS/tools/eval/paid-run-authorization-gate.mjs` | 价格已经现场核对、即将进行一次真实付费正文发送前 | 只接受60分钟内准确输入/输出/缓存/推理分项费率和15分钟内当次授权，并绑定模型、场景、正文舱哈希、思考、重试与最大积分；公开价格档位或混合价不能放行，只产生一次性不可变回执，不发送请求 |
 | `NovelOS/tools/eval/build-blind-pack.mjs` | 至少两份同任务候选已分别通过各自硬门后 | 只打包显式指定测试；用固定种子匿名排序，可加入冻结参考稿，私有映射保存前后哈希并与审稿目录隔离；发现正文内部身份泄露则落盘前停止 |

@@ -3,6 +3,7 @@
 !.env.example
 .feelfish/memory/
 .feelfish/.tmp/
+NovelOS/tools/mcp-server/mcp-config.local.json
 NovelOS_Backups/
 node_modules/
 *.log

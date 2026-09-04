@@ -1,0 +1,19 @@
+{
+  "$schema": "../../NovelOS/04-canon/entity-state-ledger.schema.json",
+  "version": 1,
+  "canonVersion": "C1",
+  "chapterOrdinal": 1,
+  "currentScene": { "locationId": "shop", "presentCharacterIds": ["protagonist", "friend"] },
+  "locations": [{ "id": "shop", "name": "旧货店" }],
+  "characters": [
+    { "id": "protagonist", "name": "主角", "presence": "PRESENT", "locationId": "shop", "status": "隐瞒信息来源", "evidence": "他没有解释自己为何知道交易结果" },
+    { "id": "friend", "name": "朋友", "presence": "PRESENT", "locationId": "shop", "status": "信任下降", "evidence": "朋友收回合同后没有再看他" }
+  ],
+  "items": [],
+  "sources": [{ "id": "prior-memory", "type": "MEMORY", "chapterOrdinal": 1, "evidence": "主角记得旧时间线中的交易后果" }],
+  "knowledge": [{ "id": "deal-will-fail", "claim": "交易会造成损失", "knownBy": [{ "characterId": "protagonist", "sourceId": "prior-memory" }] }],
+  "relationships": [{ "id": "protagonist-friend", "fromCharacterId": "friend", "toCharacterId": "protagonist", "state": "信任下降", "evidence": "朋友认为主角在控制自己" }],
+  "moneyAccounts": [],
+  "healthConditions": [],
+  "foreshadows": [{ "id": "memory-source", "status": "ACTIVE", "firstChapter": 1, "lastAdvancedChapter": 1, "nextAdvanceByChapter": 5, "evidence": "信息来源尚未暴露" }]
+}

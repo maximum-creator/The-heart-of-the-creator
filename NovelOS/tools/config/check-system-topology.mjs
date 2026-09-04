@@ -28,7 +28,15 @@ export function checkSystemTopology(root) {
   const active = readJson(path.join(projectRoot, ".feelfish", "solution.json"));
   const blocklist = readJson(path.join(projectRoot, "NovelOS", "00-control", "model-route-blocklist.json"));
   const registry = readJson(path.join(projectRoot, "NovelOS", "00-control", "production-route-registry.json"));
+  const capabilityMapFile = path.join(projectRoot, "NovelOS", "00-control", "capability-model-map.json");
+  const capabilityMap = fs.existsSync(capabilityMapFile) ? readJson(capabilityMapFile) : null;
   const failures = [];
+
+  if (capabilityMap) {
+    const policyIds = Object.keys(policy.agents).sort();
+    const mappedIds = Object.keys(capabilityMap.bindings || {}).sort();
+    if (JSON.stringify(policyIds) !== JSON.stringify(mappedIds)) failures.push({ code: "CAPABILITY_MODEL_AGENT_SET_MISMATCH", missing: policyIds.filter(id => !mappedIds.includes(id)), unexpected: mappedIds.filter(id => !policyIds.includes(id)) });
+  }
 
   const solutionId = typeof active.currentSolutionId === "string" ? active.currentSolutionId.trim() : "";
   const preferredSolutionFile = solutionId ? path.join(projectRoot, ".feelfish", "solutions", `${solutionId}.json`) : null;
@@ -83,8 +91,10 @@ export function checkSystemTopology(root) {
     const skills = frontmatterList(text, "skills");
     const tools = frontmatterList(text, "tools");
     const mcpTools = tools.filter((tool) => tool.startsWith("novelos_"));
+    const expectedModel = capabilityMap?.bindings?.[agentId]?.model?.modelName || expected.modelName;
     const activeModel = active.agentModels?.[agentId]?.modelName;
-    if (activeModel !== expected.modelName) failures.push({ code: "MODEL_POLICY_DRIFT", agentId, expected: expected.modelName, actual: activeModel || null });
+    if (!expectedModel) failures.push({ code: "MISSING_MODEL_BINDING", agentId });
+    else if (activeModel !== expectedModel) failures.push({ code: "MODEL_POLICY_DRIFT", agentId, expected: expectedModel, actual: activeModel || null });
     if (skills.length > expected.maxStaticSkills) failures.push({ code: "STATIC_SKILL_BLOAT", agentId, actual: skills.length, max: expected.maxStaticSkills, skills });
     for (const tool of mcpTools) if (!expected.allowedMcpTools.includes(tool)) failures.push({ code: "MCP_SCOPE_LEAK", agentId, tool });
     for (const tool of expected.allowedMcpTools) if (!mcpTools.includes(tool)) failures.push({ code: "MISSING_REQUIRED_MCP_TOOL", agentId, tool });
