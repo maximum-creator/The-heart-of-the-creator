@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "chapterId": "BOOK-CHAPTER-001",
+  "chapterOrdinal": null,
+  "phase": "CALIBRATION",
+  "continuityContext": {
+    "mode": "STANDALONE_CALIBRATION"
+  },
+  "route": {
+    "surface": "isolated-prose-chamber",
+    "modelName": "feelfish/qwen3.8-flash"
+  },
+  "authorization": {
+    "scope": "ONE_RUN",
+    "authorizationId": "AUTH-T11-R1",
+    "runId": "T11-R1",
+    "scenarioId": "cash-agency-001",
+    "authorizedAt": "YYYY-MM-DDTHH:mm:ss+08:00",
+      "modelName": "feelfish/qwen3.8-flash",
+    "maxCredits": 120000,
+    "evidenceRef": "user-visible authorization message or local approval record"
+  },
+  "paidAuthorizationReceipt": "records/CHAPTER-001-paid-authorization.json",
+  "preflightReceipt": "records/CHAPTER-001-preflight.json",
+  "rawResponse": "records/CHAPTER-001-raw.md",
+  "finalDraft": "chapters/CHAPTER-001.md",
+  "factContract": "records/CHAPTER-001-fact-contract.json",
+  "factSourceReview": null,
+  "transitionContract": "records/CHAPTER-001-transition-contract.json",
+  "stateDelta": "records/CHAPTER-001-state-delta.json",
+  "recentDrafts": [],
+  "editorDiff": null,
+  "rollback": {
+    "kind": "git-commit",
+    "ref": "0000000000000000000000000000000000000000"
+  },
+  "run": {
+    "runId": "T11-R1",
+    "testId": "T11-isolated-prose",
+    "surface": "isolated-prose-chamber",
+      "modelName": "feelfish/qwen3.8-flash",
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "actualCredits": 0,
+    "retryCount": 0,
+    "automaticRetry": false,
+    "contextChars": 0,
+    "contextSha256": "replace-with-preflight-controlled-context-hash",
+    "authorizationBindingSha256": "replace-with-paid-authorization-binding-hash",
+    "modeSha256": "replace-with-preflight-mode-hash",
+    "packetSha256": "replace-with-preflight-packet-hash"
+  }
+}

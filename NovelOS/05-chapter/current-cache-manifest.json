@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "stable": [
+    { "label": "正文作者固定职责", "path": ".feelfish/agents/novelos-prose-writer.md" },
+    { "label": "本书读者契约", "path": "NovelOS/01-market/reader-contract.md" }
+  ],
+  "variable": [
+    { "label": "本章 Context Manifest", "path": "NovelOS/05-chapter/current-context-manifest.md" },
+    { "label": "本章 Chapter Packet", "path": "NovelOS/05-chapter/current-chapter-packet.md" }
+  ]
+}

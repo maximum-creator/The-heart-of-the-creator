@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "chapterId": "",
+  "requiredTransitions": [
+    {
+      "id": "transition-1",
+      "domain": "relationship",
+      "from": "用进入本章前可核对的状态描述",
+      "targetBoundary": "只描述必须发生的状态方向，不预写动作顺序或台词",
+      "agencyRequired": true
+    }
+  ],
+  "protectedFacts": [
+    {
+      "id": "canon-fact-1",
+      "value": "本章不得悄悄改变的既有事实"
+    }
+  ],
+  "carryOut": [
+    {
+      "id": "open-question-1",
+      "allowedStatus": ["OPEN", "TRANSFORMED"]
+    }
+  ]
+}

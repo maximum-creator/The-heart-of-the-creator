@@ -1,0 +1,10 @@
+{
+  "type": "stdio",
+  "command": "node",
+  "args": ["<PROJECT_ROOT>/NovelOS/tools/mcp-server/novelos-mcp.mjs"],
+  "cwd": "<PROJECT_ROOT>",
+  "env": {
+    "NOVELOS_PROJECT_ROOT": "<PROJECT_ROOT>"
+  }
+}
+

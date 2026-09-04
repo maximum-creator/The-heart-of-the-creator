@@ -1,0 +1,12 @@
+task_id: null
+mode: FAST
+goal: null
+read: []
+write: []
+hard_constraints: []
+open_space: []
+budget: S
+deliverable: null
+acceptance: null
+do_not_touch: []
+

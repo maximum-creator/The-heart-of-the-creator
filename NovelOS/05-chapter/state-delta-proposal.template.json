@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "chapterId": "",
+  "sourceDraftSha256": "",
+  "actualTransitions": [
+    {
+      "id": "transition-1",
+      "from": "",
+      "to": "",
+      "causeType": "character-choice",
+      "causeOwner": "",
+      "evidence": {
+        "location": "场景或段落位置",
+        "quote": "不超过80字的正文原句"
+      }
+    }
+  ],
+  "observedFacts": [
+    {
+      "id": "canon-fact-1",
+      "value": ""
+    }
+  ],
+  "carryOut": [
+    {
+      "id": "open-question-1",
+      "status": "OPEN",
+      "evidence": {
+        "location": "章末或相关场景",
+        "quote": "不超过80字的正文原句"
+      }
+    }
+  ]
+}

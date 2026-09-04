@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "objective": "maximize_publishable_quality_per_credit",
+  "defaultMode": "FAST",
+  "upgradeTriggers": [
+    "new_book_or_volume",
+    "climax_or_major_reversal",
+    "historical_or_professional_high_risk",
+    "character_arc_turn",
+    "retention_failure_repeated"
+  ],
+  "maxDraftsPerChapter": 1,
+  "maxConsolidatedRevisions": 1,
+  "requireHypothesisBeforeExpensiveCall": true
+}
+

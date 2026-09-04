@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+.feelfish/memory/
+.feelfish/.tmp/
+NovelOS_Backups/
+node_modules/
+*.log
+*.tmp
+*.bak
+Thumbs.db
+.DS_Store

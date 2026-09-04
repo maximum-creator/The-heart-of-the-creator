@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "status": "NOT_REQUIRED",
+  "riskDomains": [],
+  "sources": [],
+  "claims": [],
+  "forbiddenPatterns": [],
+  "notes": "普通生活章保持 NOT_REQUIRED。出现历史、职业、医疗、法律、机械、工程、军事、金融或关键数量推导时改为 READY；事实缺失则改为 BLOCKED。"
+}

@@ -1,0 +1,68 @@
+{
+  "currentSolutionId": "feelfish-custom",
+  "agentModels": {
+    "novelos-director": {
+      "modelId": "feelfish",
+      "modelName": "feelfish/gpt-5.6-luna",
+      "reasoningEffort": "low",
+      "temperature": 0.25
+    },
+    "novelos-market-strategist": {
+      "modelId": "feelfish",
+      "modelName": "feelfish/gpt-5.6-terra",
+      "reasoningEffort": "high",
+      "temperature": 0.3
+    },
+    "novelos-story-architect": {
+      "modelId": "feelfish",
+      "modelName": "feelfish/kimi-k3",
+      "reasoningEffort": "max"
+    },
+    "novelos-chapter-architect": {
+      "modelId": "feelfish",
+      "modelName": "feelfish/GLM-5.3-flash",
+      "enableThinkingMode": false,
+      "temperature": 0.55
+    },
+    "novelos-character-director": {
+      "modelId": "feelfish",
+      "modelName": "feelfish/kimi-k3",
+      "reasoningEffort": "max"
+    },
+    "novelos-prose-writer": {
+      "modelId": "feelfish",
+      "modelName": "feelfish/GLM-5.3",
+      "enableThinkingMode": false,
+      "temperature": 0.78
+    },
+    "novelos-continuity-auditor": {
+      "modelId": "feelfish",
+      "modelName": "feelfish/gpt-5.6-terra",
+      "reasoningEffort": "high",
+      "temperature": 0.1
+    },
+    "novelos-narrative-editor": {
+      "modelId": "feelfish",
+      "modelName": "feelfish/kimi-k3",
+      "reasoningEffort": "max"
+    },
+    "novelos-state-curator": {
+      "modelId": "feelfish",
+      "modelName": "feelfish/GLM-5.3-flash",
+      "enableThinkingMode": false,
+      "temperature": 0.1
+    },
+    "novelos-tool-operator": {
+      "modelId": "feelfish",
+      "modelName": "feelfish/deepseek-v4-flash",
+      "enableThinkingMode": false,
+      "temperature": 0.05
+    },
+    "novelos-research-editor": {
+      "modelId": "feelfish",
+      "modelName": "feelfish/deepseek-v4-pro",
+      "enableThinkingMode": true,
+      "reasoningEffort": "high"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "version": 4,
+  "routes": [
+    {
+      "surface": "main-editorial-team",
+      "modelName": "feelfish/GLM-5.3",
+      "status": "SELECTED_BY_PUBLIC_WRITING_EVIDENCE",
+      "automaticRetry": false,
+      "allowedAutonomy": "DRAFT_ONLY",
+      "candidateRole": "DEFAULT_DAILY_PROSE",
+      "evidence": [
+        "https://benchmark.towardsai.com/models/glm-5-3-or.html",
+        "https://foreverse.cn/zh/blog/which-model-continues-novels"
+      ]
+    },
+    {
+      "surface": "main-editorial-team",
+      "modelName": "feelfish/kimi-k3",
+      "status": "SELECTED_BY_PUBLIC_WRITING_EVIDENCE",
+      "automaticRetry": false,
+      "allowedAutonomy": "KEY_TASK_ONLY",
+      "candidateRole": "STORY_CHARACTER_AND_REVISION_QUALITY_CEILING",
+      "evidence": [
+        "https://benchmark.towardsai.com/models/kimi-k3-or.html",
+        "https://foreverse.cn/zh/blog/which-model-continues-novels"
+      ]
+    },
+    {
+      "surface": "main-editorial-team",
+      "modelName": "feelfish/gpt-5.6-terra",
+      "status": "SELECTED_BY_STABILITY_EVIDENCE",
+      "automaticRetry": false,
+      "allowedAutonomy": "AUDIT_AND_MARKET_ONLY",
+      "candidateRole": "STABILITY_AND_HARD_LOGIC"
+    }
+  ]
+}

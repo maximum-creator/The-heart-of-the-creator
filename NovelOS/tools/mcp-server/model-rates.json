@@ -1,0 +1,58 @@
+{
+  "updatedAt": "2026-09-04",
+  "source": "FeelFish public catalog plus local FeelFish 4.0.33 authenticated price cache and renderer formula checked 2026-09-04",
+  "notes": [
+    "DeepSeek weekday peak windows are Asia/Shanghai 09:00-12:00 and 14:00-18:00. The public catalog currently states a 1.6x promotional peak multiplier; it remains display evidence, not authorization, and must be rechecked before every paid run.",
+    "Legacy creditsPerToken values are blended display hints and MUST NOT authorize spend. exactComponents are evidence for the separate paid authorization gate only and remain subject to its age, hash and user-confirmation checks.",
+    "FeelFish's 2025-06-06 public guide confirms that input and output have different rates and that context, auxiliary calls and model-specific caching also consume credits; reconcile against a single-request client log."
+  ],
+  "models": {
+    "feelfish/qwen3.8-flash": {
+      "creditsPerToken": 1.1,
+      "exactComponents": {
+        "inputCreditsPerToken": 11,
+        "outputCreditsPerToken": 38,
+        "cacheReadCreditsPerToken": 1.1,
+        "capturedAt": "2026-09-04T20:27:22+08:00"
+      }
+    },
+    "feelfish/qwen3.8-max": {
+      "creditsPerToken": 17,
+      "exactComponents": {
+        "inputCreditsPerToken": 170,
+        "outputCreditsPerToken": 510,
+        "cacheReadCreditsPerToken": 17,
+        "capturedAt": "2026-09-04T20:27:22+08:00"
+      },
+      "routeDecision": "REJECT_DAILY_PROSE"
+    },
+    "feelfish/deepseek-v4-flash": {
+      "creditsPerToken": 0.7,
+      "peakMultiplier": 1.6,
+      "peakRule": "deepseek-weekday-cn"
+    },
+    "feelfish/deepseek-v4-pro": {
+      "creditsPerToken": 2,
+      "peakMultiplier": 1.6,
+      "peakRule": "deepseek-weekday-cn"
+    },
+    "feelfish/M2.5": {
+      "creditsPerToken": 5
+    },
+    "feelfish/qwen3.7-max": {
+      "creditsPerToken": 12
+    },
+    "feelfish/GLM-5.2": {
+      "creditsPerToken": 15
+    },
+    "feelfish/seed-2.1-pro": {
+      "creditsPerToken": 17
+    },
+    "feelfish/gpt-5.6-terra": {
+      "creditsPerToken": 20
+    },
+    "feelfish/gpt-5.6-luna": {
+      "creditsPerToken": 2
+    }
+  }
+}

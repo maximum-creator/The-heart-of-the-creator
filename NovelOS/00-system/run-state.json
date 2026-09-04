@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "phase": "IDLE",
+  "mode": "FAST",
+  "activeTask": null,
+  "activeChapter": null,
+  "lastAcceptedArtifact": null,
+  "openRisks": []
+}

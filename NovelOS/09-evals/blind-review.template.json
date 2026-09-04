@@ -1,0 +1,49 @@
+{
+  "version": 2,
+  "testId": "T11-isolated-prose-chamber",
+  "hiddenIdentityConfirmed": true,
+  "costsHiddenDuringReview": true,
+  "candidates": [
+    {
+      "label": "A",
+      "hardDecision": "PASS",
+      "evidenceQuotes": ["填写匿名稿中可逐字定位的原句"],
+      "mainLoss": "只写一个最影响追读或人物可信度的问题；没有则填 NONE",
+      "repairScope": "LOCAL",
+      "dimensions": {
+        "readerPull": { "decision": "CONCERN", "evidenceQuote": "填写原句", "rationale": "这句如何形成或削弱下一步的具体期待" },
+        "characterAgency": { "decision": "CONCERN", "evidenceQuote": "填写原句", "rationale": "人物选择如何改变资源、时间、关系或后果" },
+        "causalProcess": { "decision": "CONCERN", "evidenceQuote": "填写原句", "rationale": "受阻与过程是否不可删除，而非只报结果" },
+        "emotionalAftertaste": { "decision": "CONCERN", "evidenceQuote": "填写原句", "rationale": "情绪是否经私人解释和行为留下未消化余波" },
+        "voiceSpecificity": { "decision": "CONCERN", "evidenceQuote": "填写原句", "rationale": "观察是否只属于本人物本场景而非通用网文腔" }
+      }
+    },
+    {
+      "label": "B",
+      "hardDecision": "PASS",
+      "evidenceQuotes": ["填写匿名稿中可逐字定位的原句"],
+      "mainLoss": "只写一个最影响追读或人物可信度的问题；没有则填 NONE",
+      "repairScope": "NONE",
+      "dimensions": {
+        "readerPull": { "decision": "PASS", "evidenceQuote": "填写原句", "rationale": "这句如何形成下一步的具体期待" },
+        "characterAgency": { "decision": "PASS", "evidenceQuote": "填写原句", "rationale": "人物选择如何改变资源、时间、关系或后果" },
+        "causalProcess": { "decision": "PASS", "evidenceQuote": "填写原句", "rationale": "受阻与过程为何不可删除" },
+        "emotionalAftertaste": { "decision": "PASS", "evidenceQuote": "填写原句", "rationale": "情绪怎样留下未消化余波" },
+        "voiceSpecificity": { "decision": "PASS", "evidenceQuote": "填写原句", "rationale": "观察为何只属于本人物本场景" }
+      }
+    }
+  ],
+  "pairwise": [
+    {
+      "left": "A",
+      "right": "B",
+      "preference": "RIGHT",
+      "difference": "PERCEPTIBLE",
+      "evidence": [
+        { "label": "A", "quote": "A稿原句" },
+        { "label": "B", "quote": "B稿原句" }
+      ],
+      "rationale": "说明两句如何造成不同的阅读期待、人物选择或情绪余波；不得猜模型"
+    }
+  ]
+}
