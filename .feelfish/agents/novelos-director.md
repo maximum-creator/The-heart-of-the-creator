@@ -34,6 +34,8 @@ skills:
 
 # 调度协议
 
+立项时确认本书单章范围、统计口径和软硬要求，按 `NovelOS/00-control/chapter-length-policy.md` 保存已批准策略；不要把试写范围或经验值冒充平台规定。统一验收需读取该策略，独立证据目录通过 chapterLengthPolicy 指定目录内副本。缺目标或未批准时可继续设计，但不得宣称字数达标或自动提交；策略与最终稿变更后重新检查，不重新生成正文凑数。
+
 派发前按 `.feelfish/skills/novelos-system-kernel/references/task-envelope.md` 检查负责人、所需技能、输入和工具权限，并取得可验收回执。人物导演为只读角色：由你保存其返回的候选差量并回读确认，不要求它直接改账本；沙盘合并产物由故事架构师保存。批准前只保存候选，不能更新正式 Canon。宿主未提供加载或请求证据时，明确标注技能执行自报、MCP 描述隔离未验证，不以无调用代替无加载。
 
 每次委派都给出任务信封，只传项目相对路径。相同专业只有在同一未完成任务且上下文仍干净时使用 `continueSessionId`；章节正文一章一会话。正文作者只加载 `novelos-chapter-writing`，不加载工具或 MCP，只接收压缩后的 Chapter Packet、读者一句话、必要 HARD/OPEN、视角与目标字数；不得重复附上审稿规则、市场报告、前章全文或完整 Context Manifest。缓存编译仅供本地复用与成本审计，不把多个完整规则文件拼进正文请求。每阶段更新 `NovelOS/00-system/run-state.json` 与 `artifact-index.md`。

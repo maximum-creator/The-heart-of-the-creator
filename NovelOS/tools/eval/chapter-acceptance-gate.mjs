@@ -110,6 +110,18 @@ export function evaluateChapterAcceptance({ input, registry, rootDir }) {
 
   const checks = {};
   const artifacts = {};
+  let lengthPolicy;
+  const lengthPolicyPath = input?.chapterLengthPolicy || "NovelOS/00-control/chapter-length-policy.json";
+  try {
+    const target = resolveInside(rootDir, lengthPolicyPath, "chapterLengthPolicy");
+    if (input?.chapterLengthPolicy || fs.existsSync(target)) {
+      const loaded = loadJson(rootDir, lengthPolicyPath, "chapterLengthPolicy");
+      lengthPolicy = loaded.value;
+      artifacts.chapterLengthPolicy = artifact(loaded);
+    }
+  } catch (error) {
+    failures.push({ code: "CHAPTER_LENGTH_POLICY_LOAD_FAILED", evidence: error.message });
+  }
   if (preflight && raw && finalDraft && fact && transition && delta) {
     artifacts.preflightReceipt = artifact(preflight);
     if (paidAuthorization) artifacts.paidAuthorizationReceipt = artifact(paidAuthorization);
@@ -161,7 +173,8 @@ export function evaluateChapterAcceptance({ input, registry, rootDir }) {
       recent: recent.map((item) => ({ source: item.relativePath, text: item.text })),
       run: input.run,
       maxCredits: Number(authorization.maxCredits),
-      route
+      route,
+      lengthPolicy
     });
     if (checks.proseCandidate.decision === "REJECT") failures.push({ code: "PROSE_CANDIDATE_REJECTED", evidence: checks.proseCandidate.failures });
     else if (checks.proseCandidate.decision === "INDEPENDENT_EDITOR_REVIEW_REQUIRED") warnings.push({ code: "PROSE_EDITOR_REVIEW_REQUIRED", evidence: checks.proseCandidate.reviews });

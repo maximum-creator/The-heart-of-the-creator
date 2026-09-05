@@ -61,6 +61,10 @@ export function analyzeProseCadence(text, source = "input") {
     : 0;
   const signals = [];
 
+  paragraphLengths.forEach((length, index) => {
+    if (length > 300) signals.push({ severity: "REVIEW", code: "SINGLE_PARAGRAPH_WALL", paragraph: index + 1, evidence: `${length} characters in one paragraph; inspect scene and mobile layout before changing it` });
+  });
+
   if (wallRun >= 3) {
     signals.push({ severity: "REVIEW", code: "PARAGRAPH_WALL_RUN", evidence: `${wallRun} consecutive paragraphs exceed 120 characters` });
   }

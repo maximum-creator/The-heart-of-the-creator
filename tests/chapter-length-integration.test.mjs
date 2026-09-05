@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { fixture } from './fixtures/chapter-acceptance.mjs';
+import { evaluateChapterAcceptance } from '../NovelOS/tools/eval/chapter-acceptance-gate.mjs';
+import { analyzeChapterLength } from '../NovelOS/tools/eval/chapter-length.mjs';
+const hash=t=>crypto.createHash('sha256').update(t).digest('hex');
+test('unified gate binds policy and final draft; out-of-range or missing target prevents automatic approval',t=>{
+  const f=fixture();t.after(()=>fs.rmSync(f.root,{recursive:true,force:true}));
+  f.input.phase='PRODUCTION';f.input.chapterOrdinal=1;f.input.continuityContext={mode:'FIRST_CHAPTER'};
+  Object.assign(f.route,{status:'PRODUCTION',sameClassPasses:3,humanVoiceAccepted:true,allowedAutonomy:'PRODUCTION'});
+  const run=()=>evaluateChapterAcceptance({input:f.input,registry:f.registry,rootDir:f.root});
+  const good=run();
+  assert.equal(good.decision,'ACCEPT_AUTONOMOUS_STATE_COMMIT');
+  assert.equal(good.checks.proseCandidate.checks.chapterLength.draftSha256,good.artifacts.finalDraft.sha256);
+  assert.equal(good.artifacts.chapterLengthPolicy.sha256,hash(fs.readFileSync(path.join(f.root,'length-policy.json'))));
+  fs.writeFileSync(path.join(f.root,'length-policy.json'),JSON.stringify({version:1,metric:'han',min:1000,max:2000,enforcement:'review',approved:true}));
+  assert.equal(run().decision,'INDEPENDENT_REVIEW_REQUIRED');
+  delete f.input.chapterLengthPolicy;
+  assert.equal(run().checks.proseCandidate.checks.chapterLength.decision,'NOT_CONFIGURED');
+  assert.equal(run().eligibleForCanonCommit,false);
+  f.input.chapterLengthPolicy='../outside.json';
+  assert.ok(run().failures.some(x=>x.code==='CHAPTER_LENGTH_POLICY_LOAD_FAILED'));
+});
+test('unset, unapproved, visible counting, empty body and null policies are explicit',()=>{
+  const p={version:1,metric:'visible',min:4,max:4,enforcement:'reject',approved:true};
+  assert.equal(analyzeChapterLength('标题\n甲，A😀',p).decision,'PASS');
+  assert.equal(analyzeChapterLength('标题',p).decision,'REJECT');
+  assert.equal(analyzeChapterLength('',null).decision,'NOT_CONFIGURED');
+  assert.equal(analyzeChapterLength('标题\n甲',{...p,approved:false}).decision,'NOT_CONFIGURED');
+  assert.equal(analyzeChapterLength('标题\n甲',{...p,min:null,max:null,approved:false}).decision,'NOT_CONFIGURED');
+  for(const value of [[],true,'',{}, {...p,min:-1},{...p,min:1.5}])assert.equal(analyzeChapterLength('标题\n甲',value).decision,'INVALID_POLICY');
+});

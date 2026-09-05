@@ -8,16 +8,18 @@ import { auditRawProseDelivery } from "./raw-prose-delivery-audit.mjs";
 import { analyzeProseCadence } from "./prose-cadence.mjs";
 import { analyzeNarrativeFingerprints } from "./narrative-fingerprint.mjs";
 import { auditT09 } from "./t09-hard-audit.mjs";
+import { analyzeChapterLength } from "./chapter-length.mjs";
 
 const REQUIRED_RUN_FIELDS = ["runId", "scenarioId", "testId", "surface", "modelName", "inputTokens", "outputTokens", "actualCredits", "retryCount", "automaticRetry", "contextChars", "modeSha256", "packetSha256"];
 
-export function evaluateProseCandidate({ draftText, source = "stdin", recent = [], run, maxCredits, route = null }) {
+export function evaluateProseCandidate({ draftText, source = "stdin", recent = [], run, maxCredits, route = null, lengthPolicy }) {
   const rawDelivery = auditRawProseDelivery(draftText, source);
   const cadence = analyzeProseCadence(draftText, source);
   const fingerprints = analyzeNarrativeFingerprints([{ source, text: draftText }, ...recent]);
   const taskAudit = /^T(?:09|11|12)(?:-|$)/u.test(run?.testId || "") ? auditT09(draftText, source) : null;
-  const failures = [...rawDelivery.failures];
-  const reviews = [...cadence.signals, ...fingerprints.files[0].signals, ...fingerprints.collectionSignals];
+  const chapterLength = analyzeChapterLength(draftText, lengthPolicy);
+  const failures = [...rawDelivery.failures, ...chapterLength.failures];
+  const reviews = [...chapterLength.reviews, ...cadence.signals, ...fingerprints.files[0].signals, ...fingerprints.collectionSignals];
   const missingRunFields = REQUIRED_RUN_FIELDS.filter((field) => run?.[field] === undefined || run?.[field] === null || run?.[field] === "");
 
   if (missingRunFields.length) failures.push({ code: "INCOMPLETE_RUN_EVIDENCE", evidence: missingRunFields });
@@ -54,7 +56,7 @@ export function evaluateProseCandidate({ draftText, source = "stdin", recent = [
     runEvidence: { missingFields: missingRunFields, maxCredits: Number(maxCredits) || null },
     failures,
     reviews,
-    checks: { rawDelivery, cadence, fingerprints, taskAudit },
+    checks: { rawDelivery, cadence, fingerprints, taskAudit, chapterLength },
     humanReview: [
       "删除核心配角后，局势、资源、时间或后果是否真的改变？",
       "关键推进是否来自人物在有限信息下的选择，而非系统、巧合或情报投喂？",
@@ -81,7 +83,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   const run = JSON.parse(fs.readFileSync(args.run, "utf8"));
   const recent = args.recent.map((file) => ({ source: file, text: fs.readFileSync(file, "utf8") }));
   const route = args.route ? JSON.parse(fs.readFileSync(args.route, "utf8")) : null;
-  const result = evaluateProseCandidate({ draftText, source: args.draft, recent, run, maxCredits: Number(args["max-credits"]), route });
+  const lengthPolicy = args["length-policy"] ? JSON.parse(fs.readFileSync(args["length-policy"], "utf8")) : undefined;
+  const result = evaluateProseCandidate({ draftText, source: args.draft, recent, run, maxCredits: Number(args["max-credits"]), route, lengthPolicy });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   if (result.decision === "REJECT") process.exitCode = 2;
 }
