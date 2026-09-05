@@ -9,8 +9,7 @@
       "recommendedModel": {
         "modelId": "feelfish",
         "modelName": "feelfish/gpt-5.6-luna",
-        "reasoningEffort": "low",
-        "temperature": 0.25
+        "reasoningEffort": "low"
       }
     },
     {
@@ -26,8 +25,9 @@
       "recommendedModel": {
         "modelId": "feelfish",
         "modelName": "feelfish/GLM-5.3-flash",
-        "enableThinkingMode": false,
-        "temperature": 0.55
+        "enableThinkingMode": true,
+        "temperature": 0.55,
+        "reasoningEffort": "low"
       }
     },
     {
@@ -35,8 +35,7 @@
       "recommendedModel": {
         "modelId": "feelfish",
         "modelName": "feelfish/gpt-5.6-terra",
-        "reasoningEffort": "high",
-        "temperature": 0.3
+        "reasoningEffort": "high"
       }
     },
     {
@@ -52,8 +51,9 @@
       "recommendedModel": {
         "modelId": "feelfish",
         "modelName": "feelfish/GLM-5.3",
-        "enableThinkingMode": false,
-        "temperature": 0.78
+        "enableThinkingMode": true,
+        "temperature": 0.78,
+        "reasoningEffort": "low"
       }
     },
     {
@@ -61,8 +61,7 @@
       "recommendedModel": {
         "modelId": "feelfish",
         "modelName": "feelfish/gpt-5.6-terra",
-        "reasoningEffort": "high",
-        "temperature": 0.1
+        "reasoningEffort": "high"
       }
     },
     {
@@ -78,8 +77,9 @@
       "recommendedModel": {
         "modelId": "feelfish",
         "modelName": "feelfish/GLM-5.3-flash",
-        "enableThinkingMode": false,
-        "temperature": 0.1
+        "enableThinkingMode": true,
+        "temperature": 0.1,
+        "reasoningEffort": "low"
       }
     },
     {

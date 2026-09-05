@@ -6,6 +6,8 @@
 
 ## 快速开始
 
+完整安装与新书复用见 [安装指南](docs/INSTALL.md)。建议保留一份原始 ZIP，每本书解压一份作为独立项目；FeelFish 的资源导入不能代替完整目录安装。
+
 1. 下载或克隆本仓库。
 2. 在 Windows PowerShell 运行 `powershell -ExecutionPolicy Bypass -File .\scripts\initialize-novelos.ps1`。脚本会校验结构、同步模型路由并生成本地 MCP 配置，全程不会调用付费模型；只检查可使用 `-CheckOnly`。
 3. 在 FeelFish 中把仓库根目录作为“小说项目”打开。
@@ -19,7 +21,7 @@
 - 可导入方案：`.feelfish/solutions/feelfish-custom.json`
 - 模型路由唯一来源：`NovelOS/00-control/capability-model-map.json`
 - 11 个 Agent：`.feelfish/agents/`
-- Skills：`.feelfish/skills/`
+- 16 个 Skills：`.feelfish/skills/`
 - 小说工程状态：`NovelOS/`
 - 八个受限 MCP 工具：`NovelOS/tools/mcp-server/`
 
@@ -27,17 +29,17 @@
 
 | Agent | 默认模型 | 思考 | 温度 | 静态 Skill |
 |---|---|---:|---:|---|
-| 总导演 | GPT-5.6 Luna | low | 0.25 | system-kernel + workflow |
-| 市场策略师 | GPT-5.6 Terra | high | 0.30 | market-selection |
-| 故事架构师 | Kimi K3 | max | 模型默认 | long-arc |
-| 章节架构师 | GLM-5.3 Flash | 关 | 0.55 | chapter-planning |
+| 总导演 | GPT-5.6 Luna | low | 不发送 | system-kernel + workflow |
+| 市场策略师 | GPT-5.6 Terra | high | 不发送 | market-selection + reader-retention |
+| 故事架构师 | Kimi K3 | max | 模型默认 | long-arc + creative-room |
+| 章节架构师 | GLM-5.3 Flash | low* | 0.55 | chapter-planning |
 | 人物与情感导演 | Kimi K3 | max | 模型默认 | natural-prose |
-| 正文作者 | GLM-5.3 | 关 | 0.78 | chapter-writing |
-| 硬逻辑审计员 | GPT-5.6 Terra | high | 0.10 | continuity-audit |
-| 叙事编辑 | Kimi K3 | max | 模型默认 | surgical-revision |
-| 状态管理员 | GLM-5.3 Flash | 关 | 0.10 | state-learning |
+| 正文作者 | GLM-5.3 | low* | 0.78 | chapter-writing |
+| 硬逻辑审计员 | GPT-5.6 Terra | high | 不发送 | continuity-audit |
+| 叙事编辑 | Kimi K3 | max | 模型默认 | surgical-revision + cross-chapter-variation |
+| 状态管理员 | GLM-5.3 Flash | low* | 0.10 | state-learning |
 | 工具操作员 | DeepSeek V4 Flash | 关 | 0.05 | token-economy |
-| 研究编辑 | DeepSeek V4 Pro | high | 模型默认 | evidence-research |
+| 研究编辑 | DeepSeek V4 Pro | high | 模型默认 | evidence-research + craft-distillation |
 
 路由原则见 `NovelOS/00-control/model-routing.md`。具体模型、思考档位和温度统一维护在 `NovelOS/00-control/capability-model-map.json`，修改后运行 `node NovelOS/tools/config/sync-model-routing.mjs --write` 投影到 FeelFish 配置。正文作者不挂工具或 MCP，只接收闭合的最小 Chapter Packet，一章只生成一版。联网、考据和 MCP 都由总导演在出现真实缺口时临时启用。
 
@@ -58,3 +60,9 @@
 ## 许可
 
 MIT License。你可以使用、修改和分发，但模型服务、FeelFish 及外部资料仍受各自条款约束。
+
+## 参与开发
+
+参见 [贡献指南](CONTRIBUTING.md)、[版本记录](CHANGELOG.md) 和 [最小示例](examples/minimal-run/README.md)。公开仓库提供无需模型密钥的回归测试；测试验证工程行为，不代表文本质量、收益或宿主 UI 已通过验收。
+
+> 参数兼容性修正（2026-09-05）：GLM 的 low* 为配置目标，FeelFish 当前公共目录缺少专属档位映射，尚未证明请求实际发送 low；不可据此承诺低档成本。详见 NovelOS/00-control/model-parameter-compatibility.md。历史测试记录保留原样，不代表当前配置。

@@ -3,13 +3,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { checkModelParameters } from "./model-parameter-policy.mjs";
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
 function frontmatterList(text, key) {
-  const frontmatter = text.match(/^---\s*\n([\s\S]*?)\n---/u)?.[1] || "";
+  const frontmatter = text.replace(/\r\n?/gu, "\n").match(/^---\s*\n([\s\S]*?)\n---/u)?.[1] || "";
   const lines = frontmatter.split(/\r?\n/u);
   const start = lines.findIndex((line) => new RegExp(`^${key}:\\s*(?:\\[\\])?\\s*$`, "u").test(line));
   if (start < 0 || /\[\]\s*$/u.test(lines[start])) return [];
@@ -32,6 +33,13 @@ export function checkSystemTopology(root) {
   const capabilityMap = fs.existsSync(capabilityMapFile) ? readJson(capabilityMapFile) : null;
   const failures = [];
   const referencedSkills = new Map();
+  function inspectParameters(value, location) {
+    if (!value || typeof value !== 'object') return;
+    if (value.modelName) for (const code of checkModelParameters(value)) failures.push({ code, location, modelName: value.modelName });
+    for (const [key, child] of Object.entries(value)) inspectParameters(child, `${location}.${key}`);
+  }
+  inspectParameters(active, 'active');
+  inspectParameters(capabilityMap, 'capabilityMap');
 
   if (capabilityMap) {
     const policyIds = Object.keys(policy.agents).sort();
@@ -53,6 +61,7 @@ export function checkSystemTopology(root) {
     failures.push({ code: "MISSING_SOLUTION_CONFIG", solutionId });
   } else {
     const solution = readJson(solutionFile);
+    inspectParameters(solution, 'recommended');
     const expectedSolutionVersion = Number(policy.feelFishSolution?.schemaVersion ?? 1);
     if (solution.version !== expectedSolutionVersion) failures.push({ code: "UNSUPPORTED_SOLUTION_VERSION", solutionId, expected: expectedSolutionVersion, actual: solution.version ?? null });
     if (!Array.isArray(solution.agents) || solution.agents.length === 0) {

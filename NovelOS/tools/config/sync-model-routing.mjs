@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { checkModelParameters } from "./model-parameter-policy.mjs";
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
@@ -23,6 +24,9 @@ export function syncModelRouting(root, { write = false } = {}) {
   const solution = readJson(solutionFile);
   const failures = [];
   const bindings = map.bindings || {};
+  const parameterFailures = Object.entries(bindings).flatMap(([agentId, binding]) =>
+    checkModelParameters(binding?.model).map(code => ({ code, agentId })));
+  if (parameterFailures.length) return { decision: "DRIFT", changed: false, failures: parameterFailures };
   const solutionAgents = new Map((solution.agents || []).map(item => [item.id, item]));
   for (const [agentId, binding] of Object.entries(bindings)) {
     if (!binding?.capability || !binding?.model?.modelName) failures.push({ code: "INVALID_CAPABILITY_BINDING", agentId });

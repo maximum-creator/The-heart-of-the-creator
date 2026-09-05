@@ -3,16 +3,101 @@
   "provider": "feelfish",
   "updatedAt": "2026-09-05",
   "bindings": {
-    "novelos-director": { "capability": "low-cost-orchestration", "model": { "modelId": "feelfish", "modelName": "feelfish/gpt-5.6-luna", "reasoningEffort": "low", "temperature": 0.25 } },
-    "novelos-market-strategist": { "capability": "market-strategy-and-tradeoffs", "model": { "modelId": "feelfish", "modelName": "feelfish/gpt-5.6-terra", "reasoningEffort": "high", "temperature": 0.3 } },
-    "novelos-story-architect": { "capability": "long-arc-architecture", "model": { "modelId": "feelfish", "modelName": "feelfish/kimi-k3", "reasoningEffort": "max" } },
-    "novelos-chapter-architect": { "capability": "fast-structured-chapter-planning", "model": { "modelId": "feelfish", "modelName": "feelfish/GLM-5.3-flash", "enableThinkingMode": false, "temperature": 0.55 } },
-    "novelos-character-director": { "capability": "character-and-emotion-causality", "model": { "modelId": "feelfish", "modelName": "feelfish/kimi-k3", "reasoningEffort": "max" } },
-    "novelos-prose-writer": { "capability": "daily-chinese-commercial-prose", "model": { "modelId": "feelfish", "modelName": "feelfish/GLM-5.3", "enableThinkingMode": false, "temperature": 0.78 } },
-    "novelos-continuity-auditor": { "capability": "stable-hard-logic-audit", "model": { "modelId": "feelfish", "modelName": "feelfish/gpt-5.6-terra", "reasoningEffort": "high", "temperature": 0.1 } },
-    "novelos-narrative-editor": { "capability": "high-value-narrative-revision", "model": { "modelId": "feelfish", "modelName": "feelfish/kimi-k3", "reasoningEffort": "max" } },
-    "novelos-state-curator": { "capability": "low-cost-structured-state", "model": { "modelId": "feelfish", "modelName": "feelfish/GLM-5.3-flash", "enableThinkingMode": false, "temperature": 0.1 } },
-    "novelos-tool-operator": { "capability": "bounded-tool-operation", "model": { "modelId": "feelfish", "modelName": "feelfish/deepseek-v4-flash", "enableThinkingMode": false, "temperature": 0.05 } },
-    "novelos-research-editor": { "capability": "current-evidence-research", "model": { "modelId": "feelfish", "modelName": "feelfish/deepseek-v4-pro", "enableThinkingMode": true, "reasoningEffort": "high" } }
+    "novelos-director": {
+      "capability": "low-cost-orchestration",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gpt-5.6-luna",
+        "reasoningEffort": "low"
+      }
+    },
+    "novelos-market-strategist": {
+      "capability": "market-strategy-and-tradeoffs",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gpt-5.6-terra",
+        "reasoningEffort": "high"
+      }
+    },
+    "novelos-story-architect": {
+      "capability": "long-arc-architecture",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/kimi-k3",
+        "reasoningEffort": "max"
+      }
+    },
+    "novelos-chapter-architect": {
+      "capability": "fast-structured-chapter-planning",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/GLM-5.3-flash",
+        "enableThinkingMode": true,
+        "temperature": 0.55,
+        "reasoningEffort": "low"
+      }
+    },
+    "novelos-character-director": {
+      "capability": "character-and-emotion-causality",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/kimi-k3",
+        "reasoningEffort": "max"
+      }
+    },
+    "novelos-prose-writer": {
+      "capability": "daily-chinese-commercial-prose",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/GLM-5.3",
+        "enableThinkingMode": true,
+        "temperature": 0.78,
+        "reasoningEffort": "low"
+      }
+    },
+    "novelos-continuity-auditor": {
+      "capability": "stable-hard-logic-audit",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gpt-5.6-terra",
+        "reasoningEffort": "high"
+      }
+    },
+    "novelos-narrative-editor": {
+      "capability": "high-value-narrative-revision",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/kimi-k3",
+        "reasoningEffort": "max"
+      }
+    },
+    "novelos-state-curator": {
+      "capability": "low-cost-structured-state",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/GLM-5.3-flash",
+        "enableThinkingMode": true,
+        "temperature": 0.1,
+        "reasoningEffort": "low"
+      }
+    },
+    "novelos-tool-operator": {
+      "capability": "bounded-tool-operation",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/deepseek-v4-flash",
+        "enableThinkingMode": false,
+        "temperature": 0.05
+      }
+    },
+    "novelos-research-editor": {
+      "capability": "current-evidence-research",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/deepseek-v4-pro",
+        "enableThinkingMode": true,
+        "reasoningEffort": "high"
+      }
+    }
   }
 }
