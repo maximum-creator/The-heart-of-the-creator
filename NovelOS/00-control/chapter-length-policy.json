@@ -1,8 +1,8 @@
 {
   "version": 1,
   "metric": "han",
-  "min": null,
-  "max": null,
+  "min": 2000,
+  "max": 2500,
   "enforcement": "review",
-  "approved": false
+  "approved": true
 }

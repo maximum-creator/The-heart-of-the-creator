@@ -1,6 +1,6 @@
 # 本书章节字数与排版验收
 
-字数目标由本书需求确认，不是平台统一推荐值。模板默认 min/max 为 null、approved 为 false，不替用户猜测篇幅。确定目标后填写同目录 chapter-length-policy.json。
+默认每章 2000—2500 汉字，不计章名、标点、数字及外文字符，超出范围进入复审，不强制凑字或截断。此默认值已由项目所有者授权采用，不是平台统一规定。单本书有明确要求时覆盖同目录 chapter-length-policy.json；导入默认值不代表以后不能调整。
 
 - version：1。
 - metric：han 只统计 Unicode 汉字；visible 统计非空白 Unicode 字符，包括标点、数字、外文和表情。两种口径都不等同宿主或平台的计费字数。
