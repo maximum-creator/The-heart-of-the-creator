@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "primaryAgentId": "novelos-director",
+  "name": "NovelOS 创作团队·市场版",
+  "description": "自包含的 11 个智能体与 16 个技能，按需协作规划、写作、研究和文本复核；不附带本地程序，不提供自动机器验收，定稿由用户批准。",
+  "agents": [
+    {
+      "id": "novelos-director",
+      "recommendedModel": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gpt-5.6-luna",
+        "reasoningEffort": "low"
+      }
+    },
+    {
+      "id": "novelos-story-architect",
+      "recommendedModel": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/kimi-k3",
+        "reasoningEffort": "max"
+      }
+    },
+    {
+      "id": "novelos-chapter-architect",
+      "recommendedModel": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/GLM-5.3-flash",
+        "enableThinkingMode": true,
+        "temperature": 0.55,
+        "reasoningEffort": "low"
+      }
+    },
+    {
+      "id": "novelos-market-strategist",
+      "recommendedModel": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gpt-5.6-terra",
+        "reasoningEffort": "high"
+      }
+    },
+    {
+      "id": "novelos-character-director",
+      "recommendedModel": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/kimi-k3",
+        "reasoningEffort": "max"
+      }
+    },
+    {
+      "id": "novelos-prose-writer",
+      "recommendedModel": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/GLM-5.3",
+        "enableThinkingMode": true,
+        "temperature": 0.78,
+        "reasoningEffort": "low"
+      }
+    },
+    {
+      "id": "novelos-continuity-auditor",
+      "recommendedModel": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gpt-5.6-terra",
+        "reasoningEffort": "high"
+      }
+    },
+    {
+      "id": "novelos-narrative-editor",
+      "recommendedModel": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/kimi-k3",
+        "reasoningEffort": "max"
+      }
+    },
+    {
+      "id": "novelos-state-curator",
+      "recommendedModel": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/GLM-5.3-flash",
+        "enableThinkingMode": true,
+        "temperature": 0.1,
+        "reasoningEffort": "low"
+      }
+    },
+    {
+      "id": "novelos-tool-operator",
+      "recommendedModel": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/deepseek-v4-flash",
+        "enableThinkingMode": false,
+        "temperature": 0.05
+      }
+    },
+    {
+      "id": "novelos-research-editor",
+      "recommendedModel": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/deepseek-v4-pro",
+        "enableThinkingMode": true,
+        "reasoningEffort": "high"
+      }
+    }
+  ]
+}
