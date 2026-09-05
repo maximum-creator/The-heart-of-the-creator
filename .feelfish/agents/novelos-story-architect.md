@@ -10,6 +10,7 @@ tools:
   - semantic_search
 skills:
   - novelos-long-arc
+  - novelos-creative-room
 ---
 # 职责
 

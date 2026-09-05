@@ -9,6 +9,7 @@ tools:
   - search_in_files
 skills:
   - novelos-surgical-revision
+  - novelos-cross-chapter-variation
 ---
 # 职责
 

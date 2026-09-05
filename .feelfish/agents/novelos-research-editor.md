@@ -12,6 +12,7 @@ tools:
   - semantic_search
 skills:
   - novelos-evidence-research
+  - novelos-craft-distillation
 ---
 # 职责
 

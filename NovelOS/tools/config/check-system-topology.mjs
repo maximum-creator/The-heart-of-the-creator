@@ -31,6 +31,7 @@ export function checkSystemTopology(root) {
   const capabilityMapFile = path.join(projectRoot, "NovelOS", "00-control", "capability-model-map.json");
   const capabilityMap = fs.existsSync(capabilityMapFile) ? readJson(capabilityMapFile) : null;
   const failures = [];
+  const referencedSkills = new Map();
 
   if (capabilityMap) {
     const policyIds = Object.keys(policy.agents).sort();
@@ -96,10 +97,26 @@ export function checkSystemTopology(root) {
     if (!expectedModel) failures.push({ code: "MISSING_MODEL_BINDING", agentId });
     else if (activeModel !== expectedModel) failures.push({ code: "MODEL_POLICY_DRIFT", agentId, expected: expectedModel, actual: activeModel || null });
     if (skills.length > expected.maxStaticSkills) failures.push({ code: "STATIC_SKILL_BLOAT", agentId, actual: skills.length, max: expected.maxStaticSkills, skills });
+    for (const skill of skills) {
+      const skillFile = path.join(projectRoot, ".feelfish", "skills", skill, "SKILL.md");
+      if (!fs.existsSync(skillFile)) failures.push({ code: "MISSING_REFERENCED_SKILL", agentId, skill });
+      const owners = referencedSkills.get(skill) || [];
+      owners.push(agentId);
+      referencedSkills.set(skill, owners);
+    }
     for (const tool of mcpTools) if (!expected.allowedMcpTools.includes(tool)) failures.push({ code: "MCP_SCOPE_LEAK", agentId, tool });
     for (const tool of expected.allowedMcpTools) if (!mcpTools.includes(tool)) failures.push({ code: "MISSING_REQUIRED_MCP_TOOL", agentId, tool });
     if (expected.mustBeWildcardQuarantined && !blocklist.routes.some((route) => route.agentId === agentId && route.modelName === "*")) {
       failures.push({ code: "MISSING_WILDCARD_QUARANTINE", agentId });
+    }
+  }
+
+  const skillsRoot = path.join(projectRoot, ".feelfish", "skills");
+  if (fs.existsSync(skillsRoot)) {
+    for (const entry of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
+      if (entry.isDirectory() && fs.existsSync(path.join(skillsRoot, entry.name, "SKILL.md")) && !referencedSkills.has(entry.name)) {
+        failures.push({ code: "UNBOUND_SKILL", skill: entry.name });
+      }
     }
   }
 

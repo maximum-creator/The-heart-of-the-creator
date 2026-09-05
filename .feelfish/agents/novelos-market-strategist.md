@@ -8,6 +8,7 @@ tools:
   - search_in_files
 skills:
   - novelos-market-selection
+  - novelos-reader-retention
 ---
 # 任务
 
