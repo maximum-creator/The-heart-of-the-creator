@@ -19,6 +19,8 @@ The Heart of the Creator — an open-source, multi-agent Chinese novel-writing s
 
 ## 先选对版本
 
+市场版已把五份必要文档模板放入所属技能，按需读取，并为上下文管理员配置宿主 `get_file_info` 统计能力。无需为单纯字数统计安装脚本。详见 [系统评估与本次收敛](docs/SYSTEM-REVIEW.md)。
+
 | 内容 | 本地完整版（仓库根目录） | 市场版（`marketplace/feelfish/`） |
 | --- | --- | --- |
 | 智能体与技能 | 11 个 / 16 项 | 11 个 / 16 项，自包含适配 |

@@ -18,11 +18,20 @@ export function checkMarketplace(root = path.resolve(here, '../marketplace/feelf
       const rel=path.relative(root,file).replaceAll('\\','/');
       check(/\.(md|json)$/.test(rel)||rel==='LICENSE','UNSUPPORTED_FILE',rel);
       check(!/memory\/|\.bak$|mcp-config|market_resources/.test(rel),'PRIVATE_OR_LOCAL_FILE',rel);
-      if(rel.startsWith('.feelfish/agents/')||rel.endsWith('/SKILL.md')) {
+      if(rel.startsWith('.feelfish/agents/')||rel.startsWith('.feelfish/skills/')) {
         const text=read(rel);
-        check(!/NovelOS\/|\.mjs\b|references\/|assets\/|\.feelfish\//i.test(text),'EXTERNAL_DEPENDENCY',rel);
+        check(!/NovelOS\/|\.mjs\b|\.feelfish\//i.test(text),'EXTERNAL_DEPENDENCY',rel);
         check(!/https?:\/\//i.test(text),'REMOTE_PROMPT_DEPENDENCY',rel);
-        check(/^---\nname: [^\n]+\ndescription:[\s\S]+?\n---\n/.test(text),'INVALID_FRONTMATTER',rel);
+        if(rel.startsWith('.feelfish/agents/')||rel.endsWith('/SKILL.md'))
+          check(/^---\nname: [^\n]+\ndescription:[\s\S]+?\n---\n/.test(text),'INVALID_FRONTMATTER',rel);
+        for(const match of text.matchAll(/(?:assets|references)\/[^\s`"'<>\[\]()，。；]+/g)) {
+          const ref=match[0];
+          const skillRoot=path.resolve(root,...rel.split('/').slice(0,3));
+          const target=path.resolve(path.dirname(file),ref);
+          const safe=rel.startsWith('.feelfish/skills/')&&!ref.includes('..')&&!/[\\%]/.test(ref)&&target.startsWith(skillRoot+path.sep);
+          check(safe,'UNSAFE_ATTACHMENT',rel);
+          if(safe)check(fs.existsSync(target)&&fs.statSync(target).isFile(),'MISSING_ATTACHMENT',`${rel}: ${ref}`);
+        }
       }
     }
     const solution=JSON.parse(read('.feelfish/solutions/feelfish-custom.json'));

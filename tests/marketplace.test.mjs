@@ -6,6 +6,23 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkMarketplace } from '../scripts/check-marketplace.mjs';
 const source=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../marketplace/feelfish');
+for (const [label,link,exists,expected] of [
+  ['bundled attachment','assets/local.md',true,'PASS'],
+  ['missing attachment','assets/absent.md',false,'MISSING_ATTACHMENT'],
+  ['escape from skill','assets/../../outside.md',false,'UNSAFE_ATTACHMENT'],
+  ['encoded escape','assets/%2e%2e/%2e%2e/outside.md',false,'UNSAFE_ATTACHMENT'],
+]) test(label,()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'novelos-attachment-'));
+  try {
+    fs.cpSync(source,root,{recursive:true});
+    const skill=path.join(root,'.feelfish/skills/novelos-state-learning');
+    if(exists){fs.mkdirSync(path.join(skill,'assets'),{recursive:true});fs.writeFileSync(path.join(skill,link),'# Local template\n');}
+    fs.appendFileSync(path.join(skill,'SKILL.md'),`\n按需读取 [模板](${link})。\n`);
+    const result=checkMarketplace(root);
+    if(expected==='PASS')assert.equal(result.decision,'PASS',JSON.stringify(result.failures));
+    else assert.ok(result.failures.some(f=>f.code===expected),JSON.stringify(result.failures));
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
 test('market package is self-contained and model bindings agree',()=>assert.equal(checkMarketplace(source).decision,'PASS'));
 test('missing resources, old script dependency and invalid model are detected',()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'novelos-market-'));
