@@ -1,5 +1,7 @@
 # 造物主之心 · NovelOS
 
+**简体中文** | [English](README.en.md)
+
 **正式开源：把一支小说创作团队装进 FeelFish。11 个智能体，16 项专用技能，从故事构思到章节复核协作完成。**
 
 The Heart of the Creator — an open-source, multi-agent Chinese novel-writing system for FeelFish.
