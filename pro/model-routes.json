@@ -1,0 +1,106 @@
+{
+  "schema": 1,
+  "edition": "NovelOS Pro",
+  "version": "1.1.0",
+  "roles": {
+    "novelos-pro-director": {
+      "name": "总导演",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gpt-5.6-terra",
+        "enableThinkingMode": true,
+        "reasoningEffort": "high"
+      },
+      "goal": "分流、剧情取舍、失败归因、验收。常规 low/medium 仅建议在宿主传参确认后手动下调。",
+      "cap": 4096
+    },
+    "novelos-pro-dramaturg": {
+      "name": "场景架构师",
+      "model": {
+        "modelId": "novelos-pro-openrouter",
+        "modelName": "anthropic/claude-sonnet-5.5",
+        "enableThinkingMode": true,
+        "reasoningEffort": "medium"
+      },
+      "goal": "候选开场和当场因果；只交可写场景包。",
+      "cap": 4096
+    },
+    "novelos-pro-opus": {
+      "name": "主正文作者",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/claude-opus-5-5",
+        "enableThinkingMode": true,
+        "reasoningEffort": "medium"
+      },
+      "goal": "完整章节、群像、关系戏。Adaptive，medium 为首档；复杂场次经确认才上 high。",
+      "cap": 12288
+    },
+    "novelos-pro-gemini": {
+      "name": "备选正文作者",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gemini-3.8-flash",
+        "enableThinkingMode": true,
+        "reasoningEffort": "low"
+      },
+      "goal": "单独写场景与对白，不接棒续同一稿。Google 默认采样，低思考。",
+      "cap": 8192
+    },
+    "novelos-pro-reader": {
+      "name": "独立读者",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gemini-3.8-flash",
+        "enableThinkingMode": true,
+        "reasoningEffort": "medium"
+      },
+      "goal": "给出具体退出点，保护好段；Gemini 写稿时移交独立审计会话审读。",
+      "cap": 4096
+    },
+    "novelos-pro-editor": {
+      "name": "局部编辑",
+      "model": {
+        "modelId": "novelos-pro-openrouter",
+        "modelName": "anthropic/claude-sonnet-5.5",
+        "enableThinkingMode": true,
+        "reasoningEffort": "low"
+      },
+      "goal": "按锁定修订单返回逐字替换，目标范围之外冻结。",
+      "cap": 4096
+    },
+    "novelos-pro-operator": {
+      "name": "工具管理员",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gemini-3.8-flash",
+        "enableThinkingMode": true,
+        "reasoningEffort": "low"
+      },
+      "goal": "只核验、只回传工具结果。离线脚本也可直接用同样的 MCP。",
+      "cap": 2048
+    },
+    "novelos-pro-continuity": {
+      "name": "连续性审计员",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gpt-5.6-terra",
+        "enableThinkingMode": true,
+        "reasoningEffort": "high"
+      },
+      "goal": "检查知识来源、时序、代价、跨章事实及修后语义；按风险调用。",
+      "cap": 4096
+    },
+    "novelos-pro-curator": {
+      "name": "书稿与状态管理员",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gemini-3.8-flash",
+        "enableThinkingMode": true,
+        "reasoningEffort": "low"
+      },
+      "goal": "保存每次试写，提取候选状态，待作者批准后交接正式快照。",
+      "cap": 3072
+    }
+  }
+}

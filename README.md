@@ -97,3 +97,9 @@ MIT License。你可以使用、修改和分发，但模型服务、FeelFish 及
 参见 [贡献指南](CONTRIBUTING.md)、[版本记录](CHANGELOG.md) 和 [最小示例](examples/minimal-run/README.md)。公开仓库提供无需模型密钥的回归测试；测试验证工程行为，不代表文本质量、收益或宿主 UI 已通过验收。
 
 > 参数兼容性修正（2026-09-05）：GLM 的 low* 为配置目标，FeelFish 当前公共目录缺少专属档位映射，尚未证明请求实际发送 low；不可据此承诺低档成本。详见 NovelOS/00-control/model-parameter-compatibility.md。历史测试记录保留原样，不代表当前配置。
+
+## NovelOS Pro
+
+[NovelOS Pro 1.1.0](pro/README.md) 是独立的本地创作方案。它使用 Opus 主写、Sonnet 场景与局部编辑、Gemini 备选写手和独立读稿，以及单独的 Pro MCP。标准版可继续使用现有方案。
+
+用 `node scripts/build-novelos-pro.mjs <尚不存在的本地目录>` 生成可导入 FeelFish 的独立项目。

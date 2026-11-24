@@ -113,3 +113,7 @@ The public project is intended to exclude API keys, FeelFish sessions, account b
 ## Contributing and verification
 
 See [Contributing](CONTRIBUTING.md), the [changelog](CHANGELOG.md), and the [minimal example](examples/minimal-run/README.md). The repository provides regression tests that do not require model credentials. Tests validate engineering behavior—not literary quality, revenue, live model availability, or host UI acceptance.
+
+## NovelOS Pro
+
+[NovelOS Pro 1.1.0](pro/README.md) is a separate local FeelFish setup for long-form serial fiction. It adds specialist roles for continuity and chapter handoff, with selective review for higher-risk chapters. Run `node scripts/build-novelos-pro.mjs <new-output-directory>` to build the project. Offline checks cover the package and local MCP; live routing and prose quality remain unverified.
