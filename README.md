@@ -100,6 +100,6 @@ MIT License。你可以使用、修改和分发，但模型服务、FeelFish 及
 
 ## NovelOS Pro
 
-[NovelOS Pro 1.1.0](pro/README.md) 是独立的本地创作方案。它使用 Opus 主写、Sonnet 场景与局部编辑、Gemini 备选写手和独立读稿，以及单独的 Pro MCP。标准版可继续使用现有方案。
+[NovelOS Pro 1.2.0](pro/README.md) 是独立的本地创作方案。它使用 Opus 主写、Sonnet 场景与局部编辑、Gemini 备选写手和独立读稿，以及单独的 Pro MCP。标准版可继续使用现有方案。
 
 用 `node scripts/build-novelos-pro.mjs <尚不存在的本地目录>` 生成可导入 FeelFish 的独立项目。

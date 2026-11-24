@@ -1,0 +1,42 @@
+# 运行回执与正式状态交接
+
+## 分项核对运行参数
+
+`model-routes.json` 是目标值。FeelFish 导入配置能写入模型、思考开关和推荐档位，不能据此证明服务商收到了档位或输出预算。输出 cap 此处仍是目标。总导演 FAST 默认 medium，STANDARD 或 DEEP 时与跨章冲突相关的调度可选 high，实际生效前留请求记录。Opus 仍为 medium。Opus、Sonnet 和 Gemini 省略温度、top_p 与 top_k。
+
+用同一次调用的脱敏请求与响应填 `runtime-observation.example.json`。记录实际请求模型、实际返回模型、服务商与请求 ID、档位、发出的最大输出 Token、输入、思考及可见 Token、结束原因、耗时和费用。思考与可见 Token 依据计费详情拆分，不能从字数或一个 completion 合计反推。无明确字段留空。场景架构和局部编辑两条 Sonnet 路由分别核验。回执不要含正文、提示、密钥或原始头部。
+
+```powershell
+node NovelOS/tools/pro/runtime-audit.mjs model-routes.json novelos-pro-dramaturg FAST runtime-observation.example.json
+```
+
+示例回执会报告 UNVERIFIED_RUNTIME。只有来源确实涵盖上游请求与响应、字段齐全且和预期一致，才会给 OBSERVED_VALUES_MATCH。仅看到 FeelFish 界面或本地配置最多填 HOST_ONLY。脚本检查提交的证据字段，不对来源签名或验证服务商。
+
+## 从原稿走到批准快照
+
+先在项目外选一个只在本地保存、支持硬链接的目录（例如 NTFS 上的私有目录），作为 vault。候选文件存到该目录之外也可以。每一稿使用自己的 runId，初始章从 1 开始，第一次使用 GENESIS；续写通过 context 获得已批准章号和基准版本。
+
+| 命令 | 入参 | 行为 |
+|---|---|---|
+| raw | vault、候选 JSON 文件 | 留存逐字响应，截断稿也能保存 |
+| inspect | vault、候选 JSON 文件 | 检查章节、前版、稿件、修订与当前差量，返回给审计员要绑定的哈希 |
+| stage | vault、候选 JSON 文件 | 确认连续性审计针对当前稿件和差量，把完整候选不可覆盖地保存 |
+| approve | vault、bookId、runId、候选哈希、作者批准引用 | **由作者本地执行**。核验后一次性发布当前章正文和状态快照。没有上游停止回执时再传 `--manual-delivery-reviewed` |
+| context | vault、bookId、必要状态键列表 | 从最新已批准快照提取最多 10 条指定事实及 600 字原文尾段，未找到的键单列 |
+| read | vault、bookId | 作者读取最新批准快照，适用于核对与备份 |
+
+候选关键字段见包内 `canon-candidate.example.json`。审计员核对上一批准快照、锁定的最终正文和候选差量，逐条确认知识来源、人物承诺、位置与物件变化。通过后把前版、finalSha256、changesSha256、PASS 和审计记录引用填进 audit。MCP 的局部替换回执只能确认修改范围。审计结论的内容仍需真实的人或独立审计岗位判断。
+
+```powershell
+node NovelOS/tools/pro/canon.mjs raw <vault> canon-candidate.example.json
+node NovelOS/tools/pro/canon.mjs inspect <vault> canon-candidate.example.json
+node NovelOS/tools/pro/canon.mjs stage <vault> canon-candidate.example.json
+node NovelOS/tools/pro/canon.mjs approve <vault> example-book chapter-01-a <候选SHA256> <作者批准记录> --manual-delivery-reviewed
+node NovelOS/tools/pro/canon.mjs context <vault> example-book "knowledge:伙计.钥匙位置"
+```
+
+上例含离线制作的虚构素材、哈希和审计引用，只用于流程演练。正式写作使用真实收集的稿、审计和作者批准。没有上游结束回执的稿件仍需作者人工确认场景已结束。明确截断的稿件只留存，不进入批准命令。发生竞争时，同一本书同一章只会有一个获准快照；同稿重复执行返回已批准。旧审批或错误的下一章基准会被退回。此包不把正式批准命令暴露给 Agent 或 MCP。
+
+## 以后经授权再做的正文试验
+
+先以同一份章包和风格样张，对 Opus medium 和 Gemini low 做六组匿名对照。六题分别是日常推进、双人强情绪、群像冲突、动作与取舍、跨章伏笔、安静兑现。两位写手的稿子独立生成。先看角色声音、节奏、设定冲突、作者改稿时间和实际交稿费用。只在仍难判断的题上比较更高档位。低档样张、真实成本与作者偏好本轮均保持待验证。

@@ -74,7 +74,7 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   });
   assert.equal(run.status, 0, run.stderr);
   const [init, list, resp, bad] = run.stdout.trim().split('\n').map(JSON.parse);
-  assert.equal(init.result.serverInfo.version, '1.1.0');
+  assert.equal(init.result.serverInfo.version, '1.2.0');
   assert.equal(list.result.tools.length, 4);
   assert.equal(JSON.parse(resp.result.content[0].text).decision, 'PACKET_READY');
   assert.equal(bad.result.isError, true);

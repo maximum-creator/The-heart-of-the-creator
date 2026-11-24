@@ -17,7 +17,7 @@ function stripHeading(line) {
   return line.replace(/^\s*#{1,6}\s*/u, "").trim();
 }
 
-export function auditRawProseDelivery(text, source = "stdin") {
+export function auditRawProseDelivery(text, source = "stdin", { titlePattern } = {}) {
   const normalized = String(text ?? "").replace(/^\uFEFF/u, "").replace(/\r\n?/g, "\n").trim();
   const lines = normalized.split("\n");
   const firstIndex = lines.findIndex((line) => line.trim());
@@ -26,7 +26,7 @@ export function auditRawProseDelivery(text, source = "stdin") {
   const failures = [];
 
   if (!normalized) failures.push({ code: "EMPTY_DELIVERY", evidence: "raw response is empty" });
-  if (title && !/^(?:《[^》]{1,30}》|(?:第[\u3400-\u9fff0-9]{1,10}章[ \t]+)?[\u3400-\u9fff0-9：:·]{1,30})$/u.test(title)) {
+  if (title && !(titlePattern ?? /^(?:《[^》]{1,30}》|(?:第[\u3400-\u9fff0-9]{1,10}章[ \t]+)?[\u3400-\u9fff0-9：:·]{1,30})$/u).test(title)) {
     failures.push({ code: "INVALID_TITLE_LINE", evidence: title.slice(0, 80) });
   }
   if (!prose) failures.push({ code: "MISSING_PROSE_AFTER_TITLE", evidence: "no prose follows the first non-empty line" });

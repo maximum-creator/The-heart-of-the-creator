@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { auditRawProseDelivery } from '../eval/raw-prose-delivery-audit.mjs';
 
 const endMarker = '[NOVELOS END]';
+const titlePattern = /^(?=.{1,80}$)(?:第[\p{L}\p{N}]{1,10}[章回节][ \t·：:]*)?(?=.*[\p{L}\p{N}])[\p{L}\p{N} \t·：:，、—–—（）()《》「」“”‘’\-]+$/u;
 const required = ['viewpoint', 'openingPressure', 'readerPromise', 'choiceAndCost', 'endChange'];
 const count = (s) => [...s].length;
 const digest = (s) => createHash('sha256').update(s, 'utf8').digest('hex');
@@ -25,10 +26,12 @@ export function checkPacket(packet = {}) {
   return { decision: 'PACKET_READY', chars: count(text), packetSha256: digest(text), packet };
 }
 
-export function checkDelivery({ raw, finishReason } = {}) {
+export function checkDelivery({ raw, finishReason, finishEvidence } = {}) {
   if (!bounded(raw, 1, 30000)) throw new Error('Missing or oversized raw response');
   const rawSha256 = digest(raw);
   const stop = String(finishReason ?? 'unknown').toLowerCase();
+  const observedStop = finishEvidence?.scope === 'UPSTREAM_RESPONSE'
+    && typeof finishEvidence.reference === 'string' && !!finishEvidence.reference.trim();
   if (!['stop', 'end_turn', 'stop_sequence', 'unknown'].includes(stop)) {
     return { decision: 'INCOMPLETE_RAW', rawSha256, finishReason: stop };
   }
@@ -37,11 +40,11 @@ export function checkDelivery({ raw, finishReason } = {}) {
     return { decision: 'INCOMPLETE_RAW', rawSha256, finishReason: stop, reason: 'Expected a unique final boundary line' };
   }
   const prose = raw.trimEnd().slice(0, -endMarker.length).trimEnd();
-  const audit = auditRawProseDelivery(prose);
+  const audit = auditRawProseDelivery(prose, 'stdin', { titlePattern });
   if (audit.failures.length || /[，、：；,:;]$/u.test(prose)) {
     return { decision: 'BLOCK_DELIVERY', rawSha256, finishReason: stop, failures: audit.failures, endsMidClause: /[，、：；,:;]$/u.test(prose) };
   }
-  return { decision: stop === 'unknown' ? 'REVIEW_WITHOUT_STOP_RECEIPT' : 'READY_FOR_READING',
+  return { decision: stop === 'unknown' || !observedStop ? 'REVIEW_WITHOUT_STOP_RECEIPT' : 'READY_FOR_READING',
     rawSha256, proseSha256: digest(prose), finishReason: stop, prose };
 }
 

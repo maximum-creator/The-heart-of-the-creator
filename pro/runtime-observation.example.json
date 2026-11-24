@@ -1,0 +1,20 @@
+{
+  "scope": "OFFLINE_FIXTURE",
+  "evidenceRef": "synthetic fixture only",
+  "requestModel": "anthropic/claude-sonnet-5.5",
+  "actualModel": "anthropic/claude-sonnet-5.5",
+  "effort": "medium",
+  "maxOutputTokens": 4096,
+  "sentSamplingParameters": [],
+  "inputTokens": 1100,
+  "reasoningTokens": 510,
+  "visibleOutputTokens": 1050,
+  "finishReason": "stop",
+  "durationMs": 12345,
+  "cost": {
+    "amount": 0,
+    "currency": "USD"
+  },
+  "provider": "Mock provider",
+  "requestId": "fixture-sonnet-medium"
+}

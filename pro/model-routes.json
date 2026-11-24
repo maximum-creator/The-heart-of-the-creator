@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "edition": "NovelOS Pro",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "roles": {
     "novelos-pro-director": {
       "name": "总导演",
@@ -9,10 +9,15 @@
         "modelId": "feelfish",
         "modelName": "feelfish/gpt-5.6-terra",
         "enableThinkingMode": true,
-        "reasoningEffort": "high"
+        "reasoningEffort": "medium"
       },
-      "goal": "分流、剧情取舍、失败归因、验收。常规 low/medium 仅建议在宿主传参确认后手动下调。",
-      "cap": 4096
+      "goal": "普通章默认 medium。跨章重排、伏笔冲突或卷级任务以 high 为目标，需核对宿主实传。",
+      "cap": 4096,
+      "effortByMode": {
+        "FAST": "medium",
+        "STANDARD": "high",
+        "DEEP": "high"
+      }
     },
     "novelos-pro-dramaturg": {
       "name": "场景架构师",
@@ -55,7 +60,7 @@
         "enableThinkingMode": true,
         "reasoningEffort": "medium"
       },
-      "goal": "给出具体退出点，保护好段；Gemini 写稿时移交独立审计会话审读。",
+      "goal": "Opus 执笔时盲读；Gemini 执笔时移交 Sonnet 新会话匿名审读。",
       "cap": 4096
     },
     "novelos-pro-editor": {
@@ -66,7 +71,7 @@
         "enableThinkingMode": true,
         "reasoningEffort": "low"
       },
-      "goal": "按锁定修订单返回逐字替换，目标范围之外冻结。",
+      "goal": "优先定点编辑；Gemini 执笔时认领匿名盲读，后续编辑必须另开会话。",
       "cap": 4096
     },
     "novelos-pro-operator": {
