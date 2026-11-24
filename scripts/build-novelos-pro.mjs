@@ -10,7 +10,10 @@ const json = (file, value) => fs.writeFileSync(file, JSON.stringify(value, null,
 const director = 'novelos-pro-director';
 
 export function validateProRoutes(roles) {
-  if (Object.keys(roles).length !== 9 || !roles[director]) throw new Error('Unexpected role set');
+  const ids = ['director', 'dramaturg', 'opus', 'gemini', 'reader', 'editor', 'operator', 'continuity', 'curator', 'arbiter'];
+  if (Object.keys(roles).length !== ids.length || ids.some((id) => !Object.hasOwn(roles, 'novelos-pro-' + id))) {
+    throw new Error('Unexpected role set');
+  }
   for (const [id, { model, cap }] of Object.entries(roles)) {
     if (!/^novelos-pro-[a-z]+$/.test(id) || !model?.modelId || !model?.modelName || !Number.isInteger(cap) || cap < 1024) {
       throw new Error('Invalid Pro role ' + id);
@@ -56,7 +59,7 @@ export function buildPro(destination) {
   }
   fs.cpSync(path.join(pro, 'templates'), path.join(target, 'templates'), { recursive: true });
   fs.copyFileSync(path.join(root, 'LICENSE'), path.join(target, 'LICENSE'), fs.constants.COPYFILE_EXCL);
-  for (const source of ['NovelOS/tools/pro/workflow.mjs', 'NovelOS/tools/pro/mcp.mjs', 'NovelOS/tools/pro/canon.mjs', 'NovelOS/tools/pro/runtime-audit.mjs', 'NovelOS/tools/eval/raw-prose-delivery-audit.mjs']) {
+  for (const source of ['NovelOS/tools/pro/workflow.mjs', 'NovelOS/tools/pro/mcp.mjs', 'NovelOS/tools/pro/dispatch.mjs', 'NovelOS/tools/pro/canon.mjs', 'NovelOS/tools/pro/runtime-audit.mjs', 'NovelOS/tools/eval/raw-prose-delivery-audit.mjs']) {
     const to = path.join(target, source);
     fs.mkdirSync(path.dirname(to), { recursive: true });
     fs.copyFileSync(path.join(root, source), to, fs.constants.COPYFILE_EXCL);
@@ -69,7 +72,8 @@ export function buildPro(destination) {
   json(path.join(target, 'feelfish.json'), { projectType: 'novel', rules: [{ relativePath: file }],
     chapters: [], roles: [], outline: [], records: [], assets: [], objects: [], inspirations: [], fileMeta: {}, fileTreeOrder: {} });
   json(path.join(target, 'mcp-config.template.json'), { type: 'stdio', command: 'node',
-    args: ['<PRO_ROOT>/NovelOS/tools/pro/mcp.mjs'], cwd: '<PRO_ROOT>' });
+    args: ['<PRO_ROOT>/NovelOS/tools/pro/mcp.mjs'], cwd: '<PRO_ROOT>',
+    env: { NOVELOS_PRO_VAULT: '<EXISTING_PRIVATE_CANON_VAULT>' } });
   return target;
 }
 

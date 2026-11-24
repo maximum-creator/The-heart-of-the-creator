@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { checkDelivery, lockIssue } from '../NovelOS/tools/pro/workflow.mjs';
 import { auditRuntime } from '../NovelOS/tools/pro/runtime-audit.mjs';
+import { planChapter } from '../NovelOS/tools/pro/dispatch.mjs';
 import { readCanon, readChapterContext, describeCandidate, saveRaw, stageCandidate, approveCanon } from '../NovelOS/tools/pro/canon.mjs';
 
 const file = (rel) => fileURLToPath(new URL(rel, import.meta.url));
@@ -53,6 +54,7 @@ test('offline or host-only reports never prove upstream delivery; drift and trun
   assert.equal(auditRuntime({ routes, role, observed: { ...upstream, finishReason: 'length' } }).truncated, true);
   assert.equal(auditRuntime({ routes, role: 'novelos-pro-director', mode: 'FAST', observed: {} }).expected.effort, 'medium');
   assert.equal(auditRuntime({ routes, role: 'novelos-pro-director', mode: 'DEEP', observed: {} }).expected.effort, 'high');
+  assert.equal(auditRuntime({ routes, role: 'novelos-pro-continuity', mode: 'STANDARD', observed: {} }).expected.effort, 'high');
 });
 
 test('truncated raw stays recoverable; a new chapter sees only the approved matching draft and delta', (t) => {
@@ -72,10 +74,30 @@ test('truncated raw stays recoverable; a new chapter sees only the approved matc
   assert.equal(context.facts[c.changes[0].key].sourceDraftSha256, c.audit.finalSha256);
   assert.deepEqual(context.missing, ['knowledge:客人.钥匙位置']);
   assert.equal(readChapterContext(root, c.bookId).previousTail, c.final);
+  const request = { bookId: c.bookId, chapter: 2, parentVersion: current.version,
+    requiredFactKeys: [c.changes[0].key], risks: [] };
+  const routine = planChapter(root, request);
+  assert.equal(routine.mode, 'FAST');
+  assert.deepEqual(routine.dispatch.beforeDraft, []);
+  assert.deepEqual(routine.dispatch.afterDraft, ['novelos-pro-reader', 'novelos-pro-continuity']);
+  assert.equal(planChapter(root, { ...request, parentVersion: 'GENESIS' }).decision, 'STALE_BASELINE');
+  const missing = planChapter(root, { ...request, requiredFactKeys: ['knowledge:客人.钥匙位置'] });
+  assert.equal(missing.decision, 'MISSING_EVIDENCE');
+  assert.equal(missing.dispatch, undefined);
+  const critical = planChapter(root, { ...request, risks: ['foreshadow_payoff', 'creative_difficulty'] });
+  assert.equal(critical.mode, 'STANDARD');
+  assert.deepEqual(critical.dispatch.beforeDraft, ['novelos-pro-opus', 'novelos-pro-dramaturg']);
+  const replan = planChapter(root, { ...request, risks: ['cross_chapter_replan'] });
+  assert.deepEqual(replan.dispatch.beforeDraft, ['novelos-pro-arbiter', 'novelos-pro-dramaturg']);
+  assert.equal(replan.context.facts[c.changes[0].key].chapter, 1);
+  assert.equal(replan.context.facts[c.changes[0].key].quote, c.changes[0].quote);
+  assert.equal(replan.context.facts[c.changes[0].key].sourceDraftSha256, c.audit.finalSha256);
   const next = input('r2', 2, current.version);
   assert.throws(() => describeCandidate(root, next), /outdated previous value/);
   next.changes = [];
   next.audit.changesSha256 = digest(json(next.changes));
+  assert.throws(() => describeCandidate(root, { ...next, packet: { ...packet, previousTail: '错误的前章尾段' } }), /approved baseline/);
+  next.packet = { ...packet, previousTail: replan.context.previousTail };
   const stagedNext = stageCandidate(root, next);
   assert.equal(readCanon(root, c.bookId).chapter, 1);
   assert.equal(approveCanon(root, { ...approval, runId: 'r2', candidateSha256: stagedNext.candidateSha256 }).chapter, 2);
@@ -95,6 +117,16 @@ test('unaudited semantic edits, changed state evidence and missing upstream rece
   const approval = { bookId: c.bookId, runId: c.runId, candidateSha256: staged.candidateSha256, authorRef: 'manual inspection' };
   assert.throws(() => approveCanon(root, approval), /manual completeness/);
   assert.equal(approveCanon(root, { ...approval, manualDeliveryReviewed: true }).decision, 'CANON_APPROVED');
+});
+
+test('a local patch cannot publish a chapter whose entire body was removed', (t) => {
+  const root = vault(t);
+  const c = input('empty');
+  const [title, quote] = c.final.split('\n\n');
+  const { order } = lockIssue({ prose: c.final, proseSha256: c.audit.finalSha256,
+    kind: 'LOCAL', quote, reason: '回归：精修删掉全部正文时必须退回。' });
+  assert.throws(() => stageCandidate(root, { ...c, edit: { order, replacement: '' },
+    final: title + '\n\n', changes: [] }), /Revised final/);
 });
 
 test('concurrent approvals commit one complete snapshot', async (t) => {

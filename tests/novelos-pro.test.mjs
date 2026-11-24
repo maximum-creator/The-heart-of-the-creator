@@ -51,15 +51,31 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   const active = JSON.parse(read('.feelfish/solution.json'));
   const solution = JSON.parse(read('.feelfish/solutions/feelfish-custom.json'));
   assert.equal(solution.primaryAgentId, 'novelos-pro-director');
-  assert.equal(solution.agents.length, 9);
+  assert.equal(solution.agents.length, 10);
   assert.deepEqual(active.agentModels['novelos-pro-opus'], manifest.roles['novelos-pro-opus'].model);
+  for (const [role, expected] of Object.entries({
+    director: 'feelfish/gpt-6.2-sol',
+    continuity: 'feelfish/gpt-6.2-sol',
+    arbiter: 'feelfish/gpt-6.2-astra',
+    opus: 'feelfish/claude-opus-5-5',
+    gemini: 'feelfish/gemini-4-carbon',
+    reader: 'anthropic/claude-sonnet-5.5',
+  })) {
+    const id = 'novelos-pro-' + role;
+    assert.equal(active.agentModels[id].modelName, expected);
+    assert.deepEqual(solution.agents.find((agent) => agent.id === id).recommendedModel, active.agentModels[id]);
+  }
   assert.match(read('templates/longform-handoff.md'), /唯一|两章离线应验例/);
   assert.match(read('.feelfish/agents/novelos-pro-continuity.md'), /pro-continuity/);
   assert.match(read('.feelfish/agents/novelos-pro-curator.md'), /pro-canon/);
   const opus = read('.feelfish/agents/novelos-pro-opus.md');
   assert.match(opus, /^tools: \[\]$/m);
-  assert.match(opus, /从一件已经开始/);
+  assert.match(opus, /分别|各自列出代价/);
   assert.equal(opus.match(/^---$/gm).length, 2);
+  const carbon = read('.feelfish/agents/novelos-pro-gemini.md');
+  assert.match(carbon, /^tools: \[\]$/m);
+  assert.match(carbon, /从一件已经开始/);
+  assert.match(read('.feelfish/agents/novelos-pro-operator.md'), /novelos_pro_plan_chapter/);
   const mutated = structuredClone(manifest.roles);
   mutated['novelos-pro-opus'].model.temperature = 0.8;
   assert.throws(() => validateProRoutes(mutated), /sampling defaults/);
@@ -68,14 +84,24 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
     { id: 2, method: 'tools/list' },
     { id: 3, method: 'tools/call', params: { name: 'novelos_pro_check_packet', arguments: { packet: fixture } } },
     { id: 4, method: 'tools/call', params: { name: 'novelos_pro_apply_edit', arguments: { prose } } },
+    { id: 5, method: 'tools/call', params: { name: 'novelos_pro_plan_chapter',
+      arguments: { bookId: 'test-book', chapter: 1, parentVersion: 'GENESIS', requiredFactKeys: [], risks: ['volume_end'] } } },
   ];
+  const vault = path.join(temp, 'vault');
+  fs.mkdirSync(vault);
   const run = spawnSync(process.execPath, [path.join(root, 'NovelOS/tools/pro/mcp.mjs')], {
+    env: { ...process.env, NOVELOS_PRO_VAULT: vault },
     encoding: 'utf8', input: rpc.map((x) => JSON.stringify({ jsonrpc: '2.0', ...x })).join('\n') + '\n'
   });
   assert.equal(run.status, 0, run.stderr);
-  const [init, list, resp, bad] = run.stdout.trim().split('\n').map(JSON.parse);
-  assert.equal(init.result.serverInfo.version, '1.2.0');
-  assert.equal(list.result.tools.length, 4);
+  const [init, list, resp, bad, routed] = run.stdout.trim().split('\n').map(JSON.parse);
+  assert.equal(init.result.serverInfo.version, '1.3.0');
+  assert.equal(list.result.tools.length, 5);
   assert.equal(JSON.parse(resp.result.content[0].text).decision, 'PACKET_READY');
   assert.equal(bad.result.isError, true);
+  const plan = JSON.parse(routed.result.content[0].text);
+  assert.equal(plan.mode, 'DEEP');
+  assert.equal(plan.dispatch.beforeDraft[0], 'novelos-pro-arbiter');
+  assert.equal(plan.dispatch.writer, 'novelos-pro-gemini');
+  assert.deepEqual(fs.readdirSync(vault), []);
 });

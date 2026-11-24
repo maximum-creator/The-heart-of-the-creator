@@ -5,7 +5,9 @@ const aliases = {
   'feelfish/claude-opus-5-5': ['claude-opus-5-5', 'anthropic/claude-opus-5.5'],
   'anthropic/claude-sonnet-5.5': ['claude-sonnet-5-5'],
   'feelfish/gemini-3.8-flash': ['gemini-3.8-flash', 'google/gemini-3.8-flash'],
-  'feelfish/gpt-5.6-terra': ['gpt-5.6-terra', 'openai/gpt-5.6-terra'],
+  'feelfish/gemini-4-carbon': ['gemini-4-carbon', 'google/gemini-4-carbon'],
+  'feelfish/gpt-6.2-sol': ['gpt-6.2-sol', 'openai/gpt-6.2-sol'],
+  'feelfish/gpt-6.2-astra': ['gpt-6.2-astra', 'openai/gpt-6.2-astra'],
 };
 const integer = (n) => Number.isSafeInteger(n) && n >= 0;
 const truncated = new Set(['length', 'max_tokens', 'MAX_TOKENS', 'model_context_window_exceeded']);

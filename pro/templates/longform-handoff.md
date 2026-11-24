@@ -16,3 +16,13 @@
 
 - 第一章原文说「宋枝只同意把借来的钥匙还回去」。候选精修改成「宋枝当面把铺子交了出去」。即使替换范围合法，修后审计仍应返工。正式快照只记录归还钥匙的承诺，下一章不能把铺子的归属当作已经变更。
 - 第一章只有宋枝听伙计说锁坏了。来领鞋的客人只看见提前收摊。第二章如果客人知道锁坏了，需要在正文里交代他从哪里听说或如何看见。
+
+## 调度和证据
+
+向工具管理员传 `bookId`、下一章 `chapter`、批准的 `parentVersion`、最多十个 `requiredFactKeys` 和 `risks`。风险从卷纲与作者任务判定。
+
+- `creative_difficulty` 增加 Opus，`viewpoint_change`、`relationship_turn`、`foreshadow_payoff` 或 `timeline_jump` 进入关键章路径。
+- `volume_end`、`cross_chapter_replan` 或 `unresolved_conflict` 触发 Astra 复核。等导演处理复核未决项后再交 Carbon。
+- `sample_review` 增加 Sonnet 独立盲读。作者批准后再走下一章，MCP 返回的前章尾段按原样传入 `previousTail`。
+
+`READY_FOR_HANDOFF` 表示基准匹配、请求的事实齐全并已产出调度单。它允许导演按序执行，前置复核的结论仍需记录。`STALE_BASELINE` 或 `MISSING_EVIDENCE` 时停在取证。核对事实应回到结果中的章节、引句和稿件哈希。

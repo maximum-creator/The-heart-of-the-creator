@@ -8,22 +8,24 @@ const digest = (s) => crypto.createHash('sha256').update(s, 'utf8').digest('hex'
 const json = (value) => JSON.stringify(value, null, 2) + '\n';
 const id = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/u;
 const hex = /^[a-f0-9]{64}$/u;
-const factKey = /^(knowledge|relationship|inventory|time|position|resource|promise):[\p{L}\p{N}_.:-]{1,120}$/u;
+const factKey = /^(knowledge|relationship|inventory|time|position|resource|promise|foreshadow):[\p{L}\p{N}_.:-]{1,120}$/u;
 const need = (ok, message) => { if (!ok) throw new Error(message); };
 
 function read(file) {
   need(fs.lstatSync(file).isFile(), 'Expected a regular Canon record file');
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
-function folder(parent, name) {
+function folder(parent, name, create = true) {
   const dir = path.join(parent, name);
-  fs.mkdirSync(dir, { recursive: true });
-  need(fs.realpathSync(dir) === dir, 'Redirected Canon directory');
+  if (create) fs.mkdirSync(dir, { recursive: true });
+  if (fs.existsSync(dir)) need(fs.realpathSync(dir) === dir, 'Redirected Canon directory');
   return dir;
 }
-function bookRoot(root, bookId) {
+function bookRoot(root, bookId, create = true) {
   need(typeof bookId === 'string' && id.test(bookId), 'Invalid book id');
-  return folder(fs.realpathSync(root), bookId);
+  const vault = fs.realpathSync(root);
+  need(fs.statSync(vault).isDirectory(), 'Expected a Canon vault directory');
+  return folder(vault, bookId, create);
 }
 function append(file, value) {
   const temporary = file + '.' + crypto.randomUUID() + '.tmp';
@@ -51,7 +53,8 @@ function snapshot(dir, bookId, chapter) {
   return entry;
 }
 export function readCanon(root, bookId) {
-  const dir = folder(bookRoot(root, bookId), 'snapshots');
+  const dir = folder(bookRoot(root, bookId, false), 'snapshots', false);
+  if (!fs.existsSync(dir)) return snapshot(dir, bookId, 0);
   const chapters = fs.readdirSync(dir).filter((p) => /^\d{8}\.json$/u.test(p)).map((p) => Number(p.slice(0, 8)));
   const latest = chapters.reduce((max, number) => Math.max(max, number), 0);
   need(latest === chapters.length, 'Canon snapshot sequence has a gap');
@@ -71,6 +74,8 @@ export function saveRaw(root, { bookId, runId, chapter, parentVersion, raw, fini
   return { decision: 'RAW_SAVED', delivery: delivery.decision, rawSha256: delivery.rawSha256 };
 }
 
+const previousTail = (head) => [...(head.final ?? '')].slice(-600).join('');
+
 export function readChapterContext(root, bookId, keys = []) {
   need(Array.isArray(keys) && keys.length <= 10 && keys.every((key) => typeof key === 'string' && factKey.test(key)),
     'Request up to ten named Canon facts');
@@ -78,7 +83,7 @@ export function readChapterContext(root, bookId, keys = []) {
   const unique = [...new Set(keys)];
   const facts = Object.fromEntries(unique.filter((key) => Object.hasOwn(head.facts, key)).map((key) => [key, head.facts[key]]));
   return { bookId, chapter: head.chapter, version: head.version, facts,
-    missing: unique.filter((key) => !Object.hasOwn(facts, key)), previousTail: [...(head.final ?? '')].slice(-600).join('') };
+    missing: unique.filter((key) => !Object.hasOwn(facts, key)), previousTail: previousTail(head) };
 }
 
 function inspect(candidate, base) {
@@ -88,11 +93,16 @@ function inspect(candidate, base) {
     && chapter === base.chapter + 1 && parentVersion === base.version, 'Stale or wrong book chapter baseline');
   const packetResult = checkPacket(packet);
   need(packetResult.decision === 'PACKET_READY', 'Packet structure failed');
+  if (packet.previousTail !== undefined) {
+    need(packet.previousTail === previousTail(base), 'Packet tail differs from the approved baseline');
+  }
   const delivery = checkDelivery({ raw, finishReason, finishEvidence });
   need(['READY_FOR_READING', 'REVIEW_WITHOUT_STOP_RECEIPT'].includes(delivery.decision), 'Incomplete or blocked raw delivery');
   if (edit) {
     const revision = applyEdit({ prose: delivery.prose, order: edit.order, replacement: edit.replacement });
     need(revision.revised === final, 'Final differs from the locked local edit');
+    need(checkDelivery({ raw: final + '\n[NOVELOS END]' }).decision === 'REVIEW_WITHOUT_STOP_RECEIPT',
+      'Revised final does not satisfy the prose delivery contract');
   } else need(delivery.prose === final, 'Final differs from the original without a bound edit');
 
   need(Array.isArray(changes) && changes.length <= 50, 'Invalid state changes');

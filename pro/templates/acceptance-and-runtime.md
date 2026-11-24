@@ -2,9 +2,9 @@
 
 ## 分项核对运行参数
 
-`model-routes.json` 是目标值。FeelFish 导入配置能写入模型、思考开关和推荐档位，不能据此证明服务商收到了档位或输出预算。输出 cap 此处仍是目标。总导演 FAST 默认 medium，STANDARD 或 DEEP 时与跨章冲突相关的调度可选 high，实际生效前留请求记录。Opus 仍为 medium。Opus、Sonnet 和 Gemini 省略温度、top_p 与 top_k。
+路由目标见 `model-routes.json`。Sol 调度常规章使用 medium，卷级重排用 high；连续性审计按风险升档。Carbon 与 Opus 从 medium 起步，Astra 卷级复核用 high。省略温度、top_p 和 top_k。FeelFish 推荐档与建议预算以实际调用回执确认。
 
-用同一次调用的脱敏请求与响应填 `runtime-observation.example.json`。记录实际请求模型、实际返回模型、服务商与请求 ID、档位、发出的最大输出 Token、输入、思考及可见 Token、结束原因、耗时和费用。思考与可见 Token 依据计费详情拆分，不能从字数或一个 completion 合计反推。无明确字段留空。场景架构和局部编辑两条 Sonnet 路由分别核验。回执不要含正文、提示、密钥或原始头部。
+用同一次调用的脱敏请求与响应填 `runtime-observation.example.json`。记录实际请求模型、实际返回模型、服务商与请求 ID、档位、发出的最大输出 Token、输入、思考及可见 Token、结束原因、耗时和费用。思考与可见 Token 依据计费详情拆分，不能从字数或一个 completion 合计反推。无明确字段留空。场景架构、盲读和局部编辑三条 Sonnet 路由分别核验。Sol 总导演额外核对实际工具调用与子会话分派。回执不要含正文、提示、密钥或原始头部。
 
 ```powershell
 node NovelOS/tools/pro/runtime-audit.mjs model-routes.json novelos-pro-dramaturg FAST runtime-observation.example.json
@@ -37,6 +37,8 @@ node NovelOS/tools/pro/canon.mjs context <vault> example-book "knowledge:伙计.
 
 上例含离线制作的虚构素材、哈希和审计引用，只用于流程演练。正式写作使用真实收集的稿、审计和作者批准。没有上游结束回执的稿件仍需作者人工确认场景已结束。明确截断的稿件只留存，不进入批准命令。发生竞争时，同一本书同一章只会有一个获准快照；同稿重复执行返回已批准。旧审批或错误的下一章基准会被退回。此包不把正式批准命令暴露给 Agent 或 MCP。
 
-## 以后经授权再做的正文试验
+## 跨章离线核对
 
-先以同一份章包和风格样张，对 Opus medium 和 Gemini low 做六组匿名对照。六题分别是日常推进、双人强情绪、群像冲突、动作与取舍、跨章伏笔、安静兑现。两位写手的稿子独立生成。先看角色声音、节奏、设定冲突、作者改稿时间和实际交稿费用。只在仍难判断的题上比较更高档位。低档样张、真实成本与作者偏好本轮均保持待验证。
+选已有卷纲里一处埋线和一处后续兑现。从卷纲提取风险与所需事实键，调用 `novelos_pro_plan_chapter`。核对是否分给 Sol 常规审计、是否需要 Sonnet 架构，以及是否触发 Astra 卷级复核。再换旧版次或未入库的事实键验证阻塞路径。私有大纲和草稿留在本地核对。
+
+此流程可用已有的批准快照或测试用快照复现，验收阶段无需生成正文。正式连载按一条完整卷线及下卷衔接评价人物声线、设定错误、伏笔兑现和作者改稿时间。

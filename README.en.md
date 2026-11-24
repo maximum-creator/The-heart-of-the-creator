@@ -116,4 +116,4 @@ See [Contributing](CONTRIBUTING.md), the [changelog](CHANGELOG.md), and the [min
 
 ## NovelOS Pro
 
-[NovelOS Pro 1.2.0](pro/README.md) is a separate local FeelFish setup for long-form serial fiction. It adds specialist roles for continuity and chapter handoff, with selective review for higher-risk chapters. Run `node scripts/build-novelos-pro.mjs <new-output-directory>` to build the project. Offline checks cover the package and local MCP; live routing and prose quality remain unverified.
+[NovelOS Pro 1.3.0](pro/README.md) is a separate local FeelFish setup for long-form serial fiction. Carbon writes, Opus supports creative decisions, Sol directs and audits continuity, Astra reviews volume-level conflicts, and Sonnet handles scene planning, blind reading, and local edits. Run `node scripts/build-novelos-pro.mjs <new-output-directory>` to build the project. Offline checks cover the package and local MCP. Live routing and prose quality remain unverified.

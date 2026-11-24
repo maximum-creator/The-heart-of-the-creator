@@ -1,21 +1,21 @@
 {
   "schema": 1,
   "edition": "NovelOS Pro",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "roles": {
     "novelos-pro-director": {
       "name": "总导演",
       "model": {
         "modelId": "feelfish",
-        "modelName": "feelfish/gpt-5.6-terra",
+        "modelName": "feelfish/gpt-6.2-sol",
         "enableThinkingMode": true,
         "reasoningEffort": "medium"
       },
-      "goal": "普通章默认 medium。跨章重排、伏笔冲突或卷级任务以 high 为目标，需核对宿主实传。",
+      "goal": "处理章务与委派；卷级重排和重大冲突用 high。",
       "cap": 4096,
       "effortByMode": {
         "FAST": "medium",
-        "STANDARD": "high",
+        "STANDARD": "medium",
         "DEEP": "high"
       }
     },
@@ -31,36 +31,36 @@
       "cap": 4096
     },
     "novelos-pro-opus": {
-      "name": "主正文作者",
+      "name": "创作辅助",
       "model": {
         "modelId": "feelfish",
         "modelName": "feelfish/claude-opus-5-5",
         "enableThinkingMode": true,
         "reasoningEffort": "medium"
       },
-      "goal": "完整章节、群像、关系戏。Adaptive，medium 为首档；复杂场次经确认才上 high。",
-      "cap": 12288
+      "goal": "只在人物动机、情绪转折或关键选择难写时提供两个方向。",
+      "cap": 4096
     },
     "novelos-pro-gemini": {
-      "name": "备选正文作者",
+      "name": "唯一正文主笔",
       "model": {
         "modelId": "feelfish",
-        "modelName": "feelfish/gemini-3.8-flash",
+        "modelName": "feelfish/gemini-4-carbon",
         "enableThinkingMode": true,
-        "reasoningEffort": "low"
+        "reasoningEffort": "medium"
       },
-      "goal": "单独写场景与对白，不接棒续同一稿。Google 默认采样，低思考。",
-      "cap": 8192
+      "goal": "从已核准章包写一版完整正文。",
+      "cap": 12288
     },
     "novelos-pro-reader": {
       "name": "独立读者",
       "model": {
-        "modelId": "feelfish",
-        "modelName": "feelfish/gemini-3.8-flash",
+        "modelId": "novelos-pro-openrouter",
+        "modelName": "anthropic/claude-sonnet-5.5",
         "enableThinkingMode": true,
         "reasoningEffort": "medium"
       },
-      "goal": "Opus 执笔时盲读；Gemini 执笔时移交 Sonnet 新会话匿名审读。",
+      "goal": "隔离场景方案及创作辅助意见，盲读 Carbon 稿。",
       "cap": 4096
     },
     "novelos-pro-editor": {
@@ -71,7 +71,7 @@
         "enableThinkingMode": true,
         "reasoningEffort": "low"
       },
-      "goal": "优先定点编辑；Gemini 执笔时认领匿名盲读，后续编辑必须另开会话。",
+      "goal": "只执行锁定片段替换。",
       "cap": 4096
     },
     "novelos-pro-operator": {
@@ -89,12 +89,17 @@
       "name": "连续性审计员",
       "model": {
         "modelId": "feelfish",
-        "modelName": "feelfish/gpt-5.6-terra",
+        "modelName": "feelfish/gpt-6.2-sol",
         "enableThinkingMode": true,
-        "reasoningEffort": "high"
+        "reasoningEffort": "medium"
       },
-      "goal": "检查知识来源、时序、代价、跨章事实及修后语义；按风险调用。",
-      "cap": 4096
+      "goal": "新会话检查批准快照、当前稿与变更证据；关键章用 high。",
+      "cap": 4096,
+      "effortByMode": {
+        "FAST": "medium",
+        "STANDARD": "high",
+        "DEEP": "high"
+      }
     },
     "novelos-pro-curator": {
       "name": "书稿与状态管理员",
@@ -106,6 +111,17 @@
       },
       "goal": "保存每次试写，提取候选状态，待作者批准后交接正式快照。",
       "cap": 3072
+    },
+    "novelos-pro-arbiter": {
+      "name": "卷级复核员",
+      "model": {
+        "modelId": "feelfish",
+        "modelName": "feelfish/gpt-6.2-astra",
+        "enableThinkingMode": true,
+        "reasoningEffort": "high"
+      },
+      "goal": "卷末或跨章重排、冲突未解时做独立复核；逐条给出证据及受影响章节。",
+      "cap": 6144
     }
   }
 }
