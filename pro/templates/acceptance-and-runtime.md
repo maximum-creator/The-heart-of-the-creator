@@ -27,6 +27,10 @@ node NovelOS/tools/pro/runtime-audit.mjs model-routes.json novelos-pro-dramaturg
 
 候选关键字段见包内 `canon-candidate.example.json`。审计员核对上一批准快照、锁定的最终正文和候选差量，逐条确认知识来源、人物承诺、位置与物件变化。通过后把前版、finalSha256、changesSha256、PASS 和审计记录引用填进 audit。MCP 的局部替换回执只能确认修改范围。审计结论的内容仍需真实的人或独立审计岗位判断。
 
+新候选填 `evidenceKeys`，列出实际采用的已批准事实键，无继承事实时用空数组。把 inspect 返回的 `evidenceSha256` 加入 audit 后再暂存。已有候选可继续读写，缺依赖记录的旧批准章在影响报告中列为待人工复核。
+
+给需要长期追踪的 `promise:` 或 `foreshadow:` 差量加 `thread`，例如 `{"id":"铺门旧账","dueChapter":24,"status":"open"}`。兑现时提交带正文出处的变更并设为 `resolved`，批准后调度停止提醒，快照保留最初埋设位置和当前证据。
+
 ```powershell
 node NovelOS/tools/pro/canon.mjs raw <vault> canon-candidate.example.json
 node NovelOS/tools/pro/canon.mjs inspect <vault> canon-candidate.example.json

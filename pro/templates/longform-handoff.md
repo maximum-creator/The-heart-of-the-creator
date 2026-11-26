@@ -21,8 +21,20 @@
 
 向工具管理员传 `bookId`、下一章 `chapter`、批准的 `parentVersion`、最多十个 `requiredFactKeys` 和 `risks`。风险从卷纲与作者任务判定。
 
+可带最多十个 `activeThreads`。返回的 `suggestedEvidence` 包含活跃线和已到期的开放承诺，按兑现章排序。查看 `dueCount` 和 `omittedSuggestions`，有取证遗漏时缩小到故事线或点名所需事实。到期项进入关键章路径，导演决定本章兑现、延后或请求作者裁决。
+
 - `creative_difficulty` 增加 Opus，`viewpoint_change`、`relationship_turn`、`foreshadow_payoff` 或 `timeline_jump` 进入关键章路径。
 - `volume_end`、`cross_chapter_replan` 或 `unresolved_conflict` 触发 Astra 复核。等导演处理复核未决项后再交 Carbon。
 - `sample_review` 增加 Sonnet 独立盲读。作者批准后再走下一章，MCP 返回的前章尾段按原样传入 `previousTail`。
 
 `READY_FOR_HANDOFF` 表示基准匹配、请求的事实齐全并已产出调度单。它允许导演按序执行，前置复核的结论仍需记录。`STALE_BASELINE` 或 `MISSING_EVIDENCE` 时停在取证。核对事实应回到结果中的章节、引句和稿件哈希。
+
+## 拟修旧章
+
+先向证据工具提交 `sourceChapter`、该批准稿的 `sourceFinalSha256`、当前 `headVersion`、变动的 `changedFactKeys` 和 `previousTailChanged`。MCP 返回关联的批准章和当前基准上的已暂存候选。
+
+- `REVIEW_DIRECT_DEPENDENCIES` 核查本章正式登记的事实或相邻原文尾段。
+- `REVIEW_UNTRACKED` 逐份查看旧版遗留记录。
+- `REVALIDATE_BASELINE` 核对后续承接是否仍成立。
+
+先让 Astra 及作者确认实际影响，尤其是登记键范围以外的剧情变化。未暂存的工作稿不在报告范围内。报告是只读预览。

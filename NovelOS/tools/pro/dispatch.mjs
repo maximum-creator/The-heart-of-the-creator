@@ -14,6 +14,7 @@ export const chapterPlanSchema = {
     chapter: { type: 'integer', minimum: 1, maximum: 99999999 },
     parentVersion: { type: 'string', pattern: '^(GENESIS|[a-f0-9]{64})$' },
     requiredFactKeys: { type: 'array', maxItems: 10, items: { type: 'string' } },
+    activeThreads: { type: 'array', maxItems: 10, items: { type: 'string' } },
     risks: { type: 'array', uniqueItems: true, items: { enum: risks } },
   },
   required: ['bookId', 'chapter', 'parentVersion', 'requiredFactKeys', 'risks'],
@@ -22,22 +23,23 @@ export const chapterPlanSchema = {
 
 export function planChapter(vault, input = {}) {
   if (!vault) throw new Error('Set NOVELOS_PRO_VAULT to an existing private Canon directory');
-  const { bookId, chapter, parentVersion, requiredFactKeys, risks: flags } = input;
+  const { bookId, chapter, parentVersion, requiredFactKeys, risks: flags, activeThreads = [] } = input;
   if (!Number.isSafeInteger(chapter) || chapter < 1 || chapter > 99999999
     || typeof parentVersion !== 'string' || !/^(GENESIS|[a-f0-9]{64})$/u.test(parentVersion)
     || !Array.isArray(requiredFactKeys) || !Array.isArray(flags)
     || flags.length > risks.length || new Set(flags).size !== flags.length
     || flags.some((flag) => !risks.includes(flag))) throw new Error('Invalid chapter plan identity, keys or risk flags');
 
-  const context = readChapterContext(vault, bookId, requiredFactKeys);
+  const context = readChapterContext(vault, bookId, requiredFactKeys, activeThreads);
   const baseline = { bookId, chapter: context.chapter, version: context.version };
   if (chapter !== context.chapter + 1 || parentVersion !== context.version) {
     return { decision: 'STALE_BASELINE', baseline, nextChapter: context.chapter + 1 };
   }
   if (context.missing.length) return { decision: 'MISSING_EVIDENCE', baseline, missing: context.missing };
 
-  const mode = deep.some((flag) => flags.includes(flag)) ? 'DEEP'
-    : standard.some((flag) => flags.includes(flag)) ? 'STANDARD' : 'FAST';
+  const detected = context.dueCount > 0 && !flags.includes('foreshadow_payoff') ? [...flags, 'foreshadow_payoff'] : flags;
+  const mode = deep.some((flag) => detected.includes(flag)) ? 'DEEP'
+    : standard.some((flag) => detected.includes(flag)) ? 'STANDARD' : 'FAST';
   const beforeDraft = [
     ...(mode === 'DEEP' ? ['novelos-pro-arbiter'] : []),
     ...(flags.includes('creative_difficulty') ? ['novelos-pro-opus'] : []),
@@ -48,7 +50,7 @@ export function planChapter(vault, input = {}) {
     'novelos-pro-continuity',
   ];
   return {
-    decision: 'READY_FOR_HANDOFF', mode, bookId, chapter, parentVersion, risks: flags,
+    decision: 'READY_FOR_HANDOFF', mode, bookId, chapter, parentVersion, risks: detected,
     dispatch: { director: 'novelos-pro-director', beforeDraft, writer: 'novelos-pro-gemini', afterDraft },
     context,
   };

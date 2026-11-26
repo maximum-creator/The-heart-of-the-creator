@@ -9,6 +9,9 @@ const json = (value) => JSON.stringify(value, null, 2) + '\n';
 const id = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/u;
 const hex = /^[a-f0-9]{64}$/u;
 const factKey = /^(knowledge|relationship|inventory|time|position|resource|promise|foreshadow):[\p{L}\p{N}_.:-]{1,120}$/u;
+const threadId = /^[\p{L}\p{N}][\p{L}\p{N}_.:-]{0,79}$/u;
+const validFactKeys = (keys, limit) => Array.isArray(keys) && keys.length <= limit
+  && keys.every((key) => typeof key === 'string' && factKey.test(key));
 const need = (ok, message) => { if (!ok) throw new Error(message); };
 
 function read(file) {
@@ -76,18 +79,40 @@ export function saveRaw(root, { bookId, runId, chapter, parentVersion, raw, fini
 
 const previousTail = (head) => [...(head.final ?? '')].slice(-600).join('');
 
-export function readChapterContext(root, bookId, keys = []) {
-  need(Array.isArray(keys) && keys.length <= 10 && keys.every((key) => typeof key === 'string' && factKey.test(key)),
-    'Request up to ten named Canon facts');
+export function readChapterContext(root, bookId, keys = [], activeThreads = []) {
+  need(validFactKeys(keys, 10), 'Request up to ten named Canon facts');
+  need(Array.isArray(activeThreads) && activeThreads.length <= 10
+    && activeThreads.every((value) => typeof value === 'string' && threadId.test(value)), 'Invalid active story threads');
   const head = readCanon(root, bookId);
   const unique = [...new Set(keys)];
   const facts = Object.fromEntries(unique.filter((key) => Object.hasOwn(head.facts, key)).map((key) => [key, head.facts[key]]));
+  const nextChapter = head.chapter + 1;
+  const relevant = Object.entries(head.facts)
+    .filter(([, fact]) => fact.thread?.status === 'open')
+    .map(([key, fact]) => ({ key, fact, overdue: fact.thread.dueChapter < nextChapter,
+      due: fact.thread.dueChapter <= nextChapter, active: activeThreads.includes(fact.thread.id) }))
+    .filter(({ due, active }) => due || active)
+    .sort((a, b) => a.fact.thread.dueChapter - b.fact.thread.dueChapter || a.fact.chapter - b.fact.chapter || a.key.localeCompare(b.key));
+  const suggestions = relevant.filter(({ key }) => !Object.hasOwn(facts, key));
   return { bookId, chapter: head.chapter, version: head.version, facts,
-    missing: unique.filter((key) => !Object.hasOwn(facts, key)), previousTail: previousTail(head) };
+    missing: unique.filter((key) => !Object.hasOwn(facts, key)), previousTail: previousTail(head),
+    dueCount: relevant.filter(({ due }) => due).length,
+    suggestedEvidence: suggestions.slice(0, 10), omittedSuggestions: Math.max(0, suggestions.length - 10) };
+}
+
+function threadMetadata(thread, oldThread, key, chapter, after) {
+  if (thread === undefined) return after === null ? undefined : oldThread;
+  need(after !== null && /^(promise|foreshadow):/u.test(key) && thread && typeof thread === 'object'
+    && Object.keys(thread).length === 3 && typeof thread.id === 'string' && threadId.test(thread.id)
+    && Number.isSafeInteger(thread.dueChapter) && thread.dueChapter > 0 && thread.dueChapter <= 99999999
+    && ['open', 'resolved'].includes(thread.status), 'Invalid story thread for ' + key);
+  need(oldThread || (thread.status === 'open' && thread.dueChapter > chapter),
+    'New story thread must open with a future due chapter: ' + key);
+  return { id: thread.id, dueChapter: thread.dueChapter, status: thread.status };
 }
 
 function inspect(candidate, base) {
-  const { runId, bookId, chapter, parentVersion, packet, raw, finishReason, finishEvidence, final, edit, changes, audit } = candidate;
+  const { runId, bookId, chapter, parentVersion, packet, raw, finishReason, finishEvidence, final, edit, changes, audit, evidenceKeys } = candidate;
   need(typeof runId === 'string' && id.test(runId), 'Invalid run id');
   need(bookId === base.bookId && Number.isSafeInteger(chapter) && chapter > 0 && chapter <= 99999999
     && chapter === base.chapter + 1 && parentVersion === base.version, 'Stale or wrong book chapter baseline');
@@ -95,6 +120,15 @@ function inspect(candidate, base) {
   need(packetResult.decision === 'PACKET_READY', 'Packet structure failed');
   if (packet.previousTail !== undefined) {
     need(packet.previousTail === previousTail(base), 'Packet tail differs from the approved baseline');
+  }
+  let dependencies;
+  let evidenceSha256;
+  if (evidenceKeys !== undefined) {
+    need(validFactKeys(evidenceKeys, 10) && new Set(evidenceKeys).size === evidenceKeys.length, 'Invalid candidate evidence keys');
+    need(evidenceKeys.every((key) => Object.hasOwn(base.facts, key)), 'Candidate evidence missing from approved baseline');
+    const facts = Object.fromEntries([...evidenceKeys].sort().map((key) => [key, base.facts[key]]));
+    dependencies = { facts, usesPreviousTail: Boolean(packet.previousTail) };
+    evidenceSha256 = digest(json({ packetSha256: packetResult.packetSha256, dependencies }));
   }
   const delivery = checkDelivery({ raw, finishReason, finishEvidence });
   need(['READY_FOR_READING', 'REVIEW_WITHOUT_STOP_RECEIPT'].includes(delivery.decision), 'Incomplete or blocked raw delivery');
@@ -108,22 +142,30 @@ function inspect(candidate, base) {
   need(Array.isArray(changes) && changes.length <= 50, 'Invalid state changes');
   const keys = new Set();
   const facts = { ...base.facts };
-  for (const { key, before, after, quote } of changes) {
+  const finalSha256 = digest(final);
+  for (const { key, before, after, quote, thread } of changes) {
     need(typeof key === 'string' && factKey.test(key) && !keys.has(key), 'Invalid or duplicate state key');
     keys.add(key);
     need((facts[key]?.value ?? null) === before, 'State change has outdated previous value: ' + key);
     need((typeof after === 'string' && after.trim() && after.length <= 700) || after === null, 'Invalid new value: ' + key);
-    need(before !== after, 'State change has no effect: ' + key);
+    need(after !== null || facts[key]?.thread?.status !== 'open', 'Resolve an open story thread before removing it: ' + key);
+    const nextThread = threadMetadata(thread, facts[key]?.thread, key, chapter, after);
+    need(before !== after || json(nextThread) !== json(facts[key]?.thread), 'State change has no effect: ' + key);
     need(typeof quote === 'string' && quote.trim().length >= 4 && quote.length <= 320 && final.includes(quote),
       'State change quote is missing from final prose: ' + key);
     if (after === null) delete facts[key];
-    else facts[key] = { value: after, chapter, quote, sourceDraftSha256: digest(final) };
+    else {
+      const threadOrigin = nextThread && (facts[key]?.threadOrigin ?? { chapter, quote, sourceDraftSha256: finalSha256 });
+      facts[key] = { value: after, chapter, quote, sourceDraftSha256: finalSha256,
+        ...(nextThread && { thread: nextThread, threadOrigin }) };
+    }
   }
-  const finalSha256 = digest(final);
   const changesSha256 = digest(json(changes));
   return { packetSha256: packetResult.packetSha256, rawSha256: delivery.rawSha256, finalSha256, changesSha256,
     auditMatches: audit?.decision === 'PASS' && audit.parentVersion === base.version && audit.finalSha256 === finalSha256
-      && audit.changesSha256 === changesSha256 && typeof audit.evidenceRef === 'string' && !!audit.evidenceRef.trim(),
+      && audit.changesSha256 === changesSha256 && (evidenceSha256 === undefined || audit.evidenceSha256 === evidenceSha256)
+      && typeof audit.evidenceRef === 'string' && !!audit.evidenceRef.trim(),
+    ...(dependencies && { dependencies, evidenceSha256 }),
     manualDeliveryReviewRequired: delivery.decision === 'REVIEW_WITHOUT_STOP_RECEIPT', facts };
 }
 
@@ -163,12 +205,58 @@ export function approveCanon(root, { bookId, runId, candidateSha256, authorRef, 
   const body = { bookId, chapter: candidate.chapter, parentVersion: base.version,
     runId, packetSha256: checked.packetSha256, rawSha256: checked.rawSha256, finalSha256: checked.finalSha256,
     changesSha256: checked.changesSha256, candidateSha256, audit: candidate.audit,
+    ...(checked.dependencies && { dependencies: checked.dependencies, evidenceSha256: checked.evidenceSha256 }),
     approval: { authorRef, manualDeliveryReviewed, approvedAt: new Date().toISOString() },
     final: candidate.final, facts: checked.facts };
   const version = digest(json(body));
   try { append(file, { ...body, version }); }
   catch (error) { if (error.code === 'EEXIST') return existing(); throw error; }
   return { decision: 'CANON_APPROVED', chapter: candidate.chapter, version };
+}
+
+export function reviewChapterImpact(root, { bookId, sourceChapter, sourceFinalSha256, headVersion, changedFactKeys, previousTailChanged } = {}) {
+  need(root, 'Set NOVELOS_PRO_VAULT to an existing private Canon directory');
+  need(Number.isSafeInteger(sourceChapter) && sourceChapter > 0 && typeof sourceFinalSha256 === 'string'
+    && hex.test(sourceFinalSha256) && typeof headVersion === 'string' && hex.test(headVersion)
+    && validFactKeys(changedFactKeys, 50) && typeof previousTailChanged === 'boolean', 'Invalid chapter impact request');
+  const head = readCanon(root, bookId);
+  if (head.version !== headVersion) return { decision: 'STALE_BASELINE', bookId, currentVersion: head.version };
+  need(sourceChapter <= head.chapter, 'Source chapter has no approved snapshot');
+  const book = bookRoot(root, bookId, false);
+  const dir = folder(book, 'snapshots', false);
+  const source = snapshot(dir, bookId, sourceChapter);
+  if (source.finalSha256 !== sourceFinalSha256) return { decision: 'STALE_SOURCE', bookId, sourceChapter };
+
+  const changed = [...new Set(changedFactKeys)];
+  function reviewReasons(chapter, tracked, keys, usesPreviousTail) {
+    const facts = changed.filter((key) => keys.includes(key));
+    const previousTail = previousTailChanged && chapter === sourceChapter + 1 && usesPreviousTail;
+    return { action: facts.length || previousTail ? 'REVIEW_DIRECT_DEPENDENCIES' : tracked ? 'REVALIDATE_BASELINE' : 'REVIEW_UNTRACKED',
+      facts, previousTail };
+  }
+
+  let parent = source;
+  const approved = [];
+  for (let chapter = sourceChapter + 1; chapter <= head.chapter; chapter += 1) {
+    const entry = snapshot(dir, bookId, chapter);
+    need(entry.parentVersion === parent.version, 'Broken Canon parent binding');
+    const deps = entry.dependencies;
+    approved.push({ chapter, version: entry.version, auditEvidence: entry.audit?.evidenceRef,
+      ...reviewReasons(chapter, Boolean(deps), Object.keys(deps?.facts ?? {}), deps?.usesPreviousTail === true) });
+    parent = entry;
+  }
+  const runs = folder(book, 'runs', false);
+  const staged = [];
+  if (fs.existsSync(runs)) {
+    for (const file of fs.readdirSync(runs).filter((name) => name.endsWith('.json') && id.test(name.slice(0, -5)))) {
+      const candidate = read(path.join(runs, file));
+      if (candidate.bookId !== bookId || candidate.chapter !== head.chapter + 1 || candidate.parentVersion !== headVersion) continue;
+      staged.push({ chapter: candidate.chapter, runId: candidate.runId, candidateSha256: digest(json(candidate)),
+        ...reviewReasons(candidate.chapter, Array.isArray(candidate.evidenceKeys), candidate.evidenceKeys ?? [], Boolean(candidate.packet.previousTail)) });
+    }
+  }
+  if (readCanon(root, bookId).version !== headVersion) return { decision: 'STALE_BASELINE', bookId };
+  return { decision: 'REVIEW_IMPACT', bookId, sourceChapter, sourceFinalSha256, headVersion, changedFactKeys: changed, approved, staged };
 }
 
 if (process.argv[1] && pathToFileURL(fs.realpathSync(process.argv[1])).href === import.meta.url) {
