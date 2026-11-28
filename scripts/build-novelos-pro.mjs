@@ -54,7 +54,8 @@ export function buildPro(destination) {
   json(path.join(ff, 'solutions', 'feelfish-custom.json'), solution);
   json(path.join(ff, 'solution.json'), { currentSolutionId: 'feelfish-custom',
     agentModels: Object.fromEntries(routing.map(([id, route]) => [id, route.model])) });
-  for (const source of ['README.md', 'model-routes.json', 'scene-packet.example.json', 'runtime-observation.example.json', 'canon-candidate.example.json']) {
+  for (const source of ['README.md', 'model-routes.json', 'scene-packet.example.json', 'chapter-handoff.example.json',
+    'runtime-observation.example.json', 'canon-candidate.example.json']) {
     fs.copyFileSync(path.join(pro, source), path.join(target, source), fs.constants.COPYFILE_EXCL);
   }
   fs.cpSync(path.join(pro, 'templates'), path.join(target, 'templates'), { recursive: true });

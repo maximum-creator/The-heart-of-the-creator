@@ -9,6 +9,7 @@ import { planChapter } from '../NovelOS/tools/pro/dispatch.mjs';
 const packet = JSON.parse(fs.readFileSync(new URL('../pro/scene-packet.example.json', import.meta.url), 'utf8'));
 const bookId = 'volume-fixture';
 const key = 'promise:铺门公开交还';
+const derived = 'knowledge:伙计.听到约定';
 const thread = { id: '铺门旧账', dueChapter: 24, status: 'open' };
 const seed = '她当众答应月底交还钥匙。';
 const payoff = '到月底，她当众交还了钥匙。';
@@ -55,7 +56,10 @@ test('an offline 24-chapter volume preserves the seed, detects payoff, tracks re
     /missing from approved/);
 
   for (let chapter = 2; chapter < 24; chapter += 1) {
-    approve(prepare(chapter, '她在门口停了一下。', [], chapter === 8 ? [key] : []));
+    const sentence = chapter === 8 ? '伙计听见她在门口说起月底的约定。' : '她在门口停了一下。';
+    const changes = chapter === 8 ? [{ key: derived, before: null, after: '听到了约定', quote: sentence }] : [];
+    const deps = chapter === 8 ? [key] : chapter === 12 ? [derived] : [];
+    approve(prepare(chapter, sentence, changes, deps));
   }
   const due = plan();
   assert.equal(due.mode, 'STANDARD');
@@ -76,15 +80,21 @@ test('an offline 24-chapter volume preserves the seed, detects payoff, tracks re
   assert.equal(next.context.previousTail, head.final);
   const stagedNext = stageCandidate(vault, prepare(25, '她推开铺门。', [], [key]));
 
+  const proposedFinal = initial.final.replace('月底', '下月');
   const proposed = { bookId, sourceChapter: 1, sourceFinalSha256: seedHash, headVersion: head.version,
-    changedFactKeys: [key], previousTailChanged: true };
+    changedFactKeys: [key], proposedFinal };
   const impact = reviewChapterImpact(vault, proposed);
   assert.equal(impact.decision, 'REVIEW_IMPACT');
+  assert.equal(impact.previousTailChanged, true);
+  assert.match(impact.proposedFinalSha256, /^[a-f0-9]{64}$/u);
+  assert.throws(() => reviewChapterImpact(vault, { ...proposed, previousTailChanged: false }), /Declared tail change/);
   assert.equal(impact.approved.length, 23);
   assert.equal(impact.approved.find((entry) => entry.chapter === 2).previousTail, true);
   assert.equal(impact.approved.find((entry) => entry.chapter === 3).action, 'REVIEW_UNTRACKED');
   assert.equal(impact.approved.find((entry) => entry.chapter === 4).action, 'REVALIDATE_BASELINE');
   assert.equal(impact.approved.find((entry) => entry.chapter === 8).action, 'REVIEW_DIRECT_DEPENDENCIES');
+  assert.deepEqual(impact.approved.find((entry) => entry.chapter === 12).indirect, [{ key: derived, viaChapter: 8 }]);
+  assert.equal(impact.approved.find((entry) => entry.chapter === 12).action, 'REVIEW_INDIRECT_DEPENDENCIES');
   assert.equal(impact.approved.find((entry) => entry.chapter === 24).auditEvidence, 'offline-volume/24');
   assert.equal(impact.staged[0].candidateSha256, stagedNext.candidateSha256);
   assert.equal(impact.staged[0].action, 'REVIEW_DIRECT_DEPENDENCIES');

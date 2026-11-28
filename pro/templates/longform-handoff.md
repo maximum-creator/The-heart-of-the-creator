@@ -29,12 +29,21 @@
 
 `READY_FOR_HANDOFF` 表示基准匹配、请求的事实齐全并已产出调度单。它允许导演按序执行，前置复核的结论仍需记录。`STALE_BASELINE` 或 `MISSING_EVIDENCE` 时停在取证。核对事实应回到结果中的章节、引句和稿件哈希。
 
+等前置复核完成，再用 `novelos_pro_prepare_chapter` 提交章务 `brief`、`factKeys` 和完整 `dueDecisions`。每条到期项填 `key`、`action`、`reason`。兑现选择 `PAYOFF` 并把对应事实列入 `factKeys`，延期选择 `DEFER` 并提供将来的 `dueChapter`。需要作者裁决时填写 `AUTHOR_REVIEW`，留在筹备阶段。章务的 `designConstraints` 用于记录本章设计，MCP 从批准快照单独生成 `hardFacts` 和上章尾段。主笔只收工具返回的 `packet`。
+
 ## 拟修旧章
 
-先向证据工具提交 `sourceChapter`、该批准稿的 `sourceFinalSha256`、当前 `headVersion`、变动的 `changedFactKeys` 和 `previousTailChanged`。MCP 返回关联的批准章和当前基准上的已暂存候选。
+先向证据工具提交 `sourceChapter`、该批准稿的 `sourceFinalSha256`、当前 `headVersion`、变动的 `changedFactKeys`，以及 `proposedFinal` 或 `previousTailChanged`。有拟改稿时工具会计算其哈希并核对尾段。报告返回关联的批准章和当前基准上的已暂存候选。
 
 - `REVIEW_DIRECT_DEPENDENCIES` 核查本章正式登记的事实或相邻原文尾段。
+- `REVIEW_INDIRECT_DEPENDENCIES` 沿报告给出的中间章追查后续产出的事实。列表是保守的复核范围。
 - `REVIEW_UNTRACKED` 逐份查看旧版遗留记录。
 - `REVALIDATE_BASELINE` 核对后续承接是否仍成立。
 
 先让 Astra 及作者确认实际影响，尤其是登记键范围以外的剧情变化。未暂存的工作稿不在报告范围内。报告是只读预览。
+
+## 作者终审
+
+开卷先确认读者在等什么、关键人物的声线样张与本卷应兑现的代价。卷中、卷末和下卷开头连读，定位想跳读的首处、重复场面的相同结果、人物越权知情以及承诺是否兑现。审读意见保留段落位置、逐字引句、阅读损失和建议处理范围。局部问题随终稿差异交终审。整段因果失效时退回卷纲。
+
+作者本地 `review` 可查看原稿、终稿、局部修改理由、状态变更、交付状态和待批准哈希。读者意见与审计原件保存在本地项目记录。正式批准使用终审确认的哈希。

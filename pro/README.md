@@ -1,4 +1,4 @@
-# NovelOS Pro 1.4.0 · 长篇连载方案
+# NovelOS Pro 1.5.0 · 长篇连载方案
 
 独立于 NovelOS 标准版的 FeelFish 方案。Carbon 一章一稿，Opus 按需辅助，Sol 负责导演与常规审计，Astra 复核卷级冲突。作者本地批准正式设定。
 
@@ -6,7 +6,7 @@
 
 1. 从仓库根目录运行 `node scripts/build-novelos-pro.mjs <新目录>`，导入生成的 `feelfish.json`。选择自定义方案，确认总导演和十个岗位。
 2. 在模型菜单核对 Carbon、Opus 5.5、Sol、Astra 的可用性。Sonnet 三个岗位使用同一个自定义接口 `novelos-pro-openrouter`（OpenRouter 的 OpenAI 兼容地址和模型名 `anthropic/claude-sonnet-5.5`）。
-3. 用包内 `mcp-config.template.json` 添加本地 stdio 服务，填项目绝对路径和已有的私有 Canon vault 路径。服务进程通过 `NOVELOS_PRO_VAULT` 读取批准快照。六个 Pro 工具只给工具管理员。
+3. 用包内 `mcp-config.template.json` 添加本地 stdio 服务，填项目绝对路径和已有的私有 Canon vault 路径。服务进程通过 `NOVELOS_PRO_VAULT` 读取批准快照。七个 Pro 工具只给工具管理员。
 
 FeelFish 导入文件给出目标模型和默认思考档。安装后需用脱敏回执核对实际模型、档位和输出预算。Sol/Astra 还需确认实际工具调用，尤其是 Sol 的子智能体分派。OpenAI 直连的原生工具调用使用 Responses API。
 
@@ -39,6 +39,6 @@ MCP 只读取授权 vault 里最新批准的快照，按事实键返回值、来
 
 已批准的承诺和伏笔可登记故事线与预计兑现章。工具提示活跃线和到期事项，到期触发关键章路径。修改已批准旧章前，先预览需重审的直接依赖、未登记依赖和后续基准。影响预览保留已批准记录，实际改稿和重新审批由作者决定。
 
-定点编辑后重验最终稿。候选、审计和作者批准绑定当前稿及上一状态版本。只有作者通过本地 CLI 发布正式快照。详细操作见 [长篇交接](templates/longform-handoff.md) 和 [回执与正式状态](templates/acceptance-and-runtime.md)。
+导演处理到期伏笔后，由 MCP 直接从快照编译开写章包。实际捕获的回执通过本地 CLI 登记，与章包及原稿核对。编辑后重验最终稿，作者可用本地 review 查看原稿、局部差异、状态提案和可批准的候选哈希。详细操作见 [长篇交接](templates/longform-handoff.md) 和 [回执与正式状态](templates/acceptance-and-runtime.md)。
 
 本版验收覆盖离线打包、逐岗配置、只读取证、跨章调度和批准流程，还有 24 章卷线及下一卷候选的合成夹具回归。账户可用性、FeelFish 实际调度、真实整卷质量和上游参数待实测。

@@ -35,11 +35,11 @@ function vault(t) {
 
 test('Pro accepts naturally spaced chapter titles while preserving the real-stop distinction', () => {
   const { raw } = input('one');
-  assert.equal(checkDelivery({ raw, finishReason: 'stop', finishEvidence: provenance }).decision, 'READY_FOR_READING');
+  assert.equal(checkDelivery({ raw, finishReason: 'stop', finishEvidence: provenance }).decision, 'REVIEW_WITHOUT_STOP_RECEIPT');
   assert.equal(checkDelivery({ raw, finishReason: 'stop' }).decision, 'REVIEW_WITHOUT_STOP_RECEIPT');
   assert.equal(checkDelivery({ raw, finishReason: 'MAX_TOKENS', finishEvidence: provenance }).decision, 'INCOMPLETE_RAW');
-  for (const title of ['第一章 门外 有人', 'Chapter 1 — Alex', '第十一章 老街：A、B 两把钥匙', '第一回（上）雨夜']) {
-    assert.equal(checkDelivery({ raw: raw.replace(/^.*\n/u, title + '\n'), finishReason: 'STOP', finishEvidence: provenance }).decision, 'READY_FOR_READING');
+  for (const title of ['第一章 门外 有人', 'Chapter 1 — Alex', '第十一章 老街：A、B 两把钥匙', '第一回（上）雨夜', '第一章 谁拿了钥匙？']) {
+    assert.equal(checkDelivery({ raw: raw.replace(/^.*\n/u, title + '\n'), finishReason: 'STOP', finishEvidence: provenance }).decision, 'REVIEW_WITHOUT_STOP_RECEIPT');
   }
   assert.equal(checkDelivery({ raw: '她转身走了。\n\n天亮了。\n[NOVELOS END]', finishReason: 'stop', finishEvidence: provenance }).decision, 'BLOCK_DELIVERY');
 });
@@ -64,7 +64,7 @@ test('truncated raw stays recoverable; a new chapter sees only the approved matc
   assert.throws(() => stageCandidate(root, { ...c, runId: 'stopped', finishReason: 'length' }), /Incomplete/);
   const { candidateSha256 } = stageCandidate(root, c);
   assert.equal(readCanon(root, c.bookId).chapter, 0);
-  const approval = { bookId: c.bookId, runId: c.runId, candidateSha256, authorRef: 'author accepted this hash' };
+  const approval = { bookId: c.bookId, runId: c.runId, candidateSha256, authorRef: 'author accepted this hash', manualDeliveryReviewed: true };
   assert.throws(() => approveCanon(root, { ...approval, candidateSha256: 'f'.repeat(64) }), /does not match/);
   assert.equal(approveCanon(root, approval).decision, 'CANON_APPROVED');
   assert.equal(approveCanon(root, approval).decision, 'ALREADY_APPROVED');
@@ -134,7 +134,8 @@ test('concurrent approvals commit one complete snapshot', async (t) => {
   const first = input('a'), second = input('b');
   const records = [first, second].map((x) => [x.runId, stageCandidate(root, x).candidateSha256]);
   const tryApprove = ([runId, sha]) => new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [file('../NovelOS/tools/pro/canon.mjs'), 'approve', root, first.bookId, runId, sha, 'author-ref'], { stdio: 'ignore' });
+    const child = spawn(process.execPath, [file('../NovelOS/tools/pro/canon.mjs'), 'approve', root, first.bookId, runId, sha, 'author-ref',
+      '--manual-delivery-reviewed'], { stdio: 'ignore' });
     child.on('error', reject);
     child.on('exit', resolve);
   });

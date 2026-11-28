@@ -11,6 +11,7 @@ const aliases = {
 };
 const integer = (n) => Number.isSafeInteger(n) && n >= 0;
 const truncated = new Set(['length', 'max_tokens', 'MAX_TOKENS', 'model_context_window_exceeded']);
+export const matchesRuntimeModel = (expected, observed) => [expected, ...(aliases[expected] ?? [])].includes(observed);
 
 export function auditRuntime({ routes, role, mode = 'FAST', observed }) {
   const route = Object.hasOwn(routes.roles, role) ? routes.roles[role] : null;
@@ -23,9 +24,8 @@ export function auditRuntime({ routes, role, mode = 'FAST', observed }) {
     if (observed[key] === undefined || observed[key] === null) absent.push(key);
     else if (!predicate(observed[key])) mismatches.push(key);
   };
-  const known = [expected.model, ...(aliases[expected.model] ?? [])];
-  compare('requestModel', (s) => known.includes(s));
-  compare('actualModel', (s) => known.includes(s));
+  compare('requestModel', (s) => matchesRuntimeModel(expected.model, s));
+  compare('actualModel', (s) => matchesRuntimeModel(expected.model, s));
   compare('effort', (s) => s === expected.effort);
   compare('maxOutputTokens', (n) => n === expected.maxOutputTokens);
   for (const key of ['inputTokens', 'reasoningTokens', 'visibleOutputTokens']) compare(key, integer);

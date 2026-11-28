@@ -90,6 +90,10 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
       bookId: 'test-book', sourceChapter: 1, sourceFinalSha256: 'a'.repeat(64), headVersion: 'b'.repeat(64),
       changedFactKeys: [], previousTailChanged: false,
     } } },
+    { id: 7, method: 'tools/call', params: { name: 'novelos_pro_prepare_chapter', arguments: {
+      bookId: 'test-book', chapter: 1, parentVersion: 'GENESIS',
+      brief: Object.fromEntries(Object.entries(fixture).filter(([key]) => key !== 'hardFacts')), factKeys: [], dueDecisions: [],
+    } } },
   ];
   const vault = path.join(temp, 'vault');
   fs.mkdirSync(vault);
@@ -98,9 +102,9 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
     encoding: 'utf8', input: rpc.map((x) => JSON.stringify({ jsonrpc: '2.0', ...x })).join('\n') + '\n'
   });
   assert.equal(run.status, 0, run.stderr);
-  const [init, list, resp, bad, routed, impact] = run.stdout.trim().split('\n').map(JSON.parse);
-  assert.equal(init.result.serverInfo.version, '1.4.0');
-  assert.equal(list.result.tools.length, 6);
+  const [init, list, resp, bad, routed, impact, prepared] = run.stdout.trim().split('\n').map(JSON.parse);
+  assert.equal(init.result.serverInfo.version, '1.5.0');
+  assert.equal(list.result.tools.length, 7);
   assert.ok(list.result.tools.some((tool) => tool.name === 'novelos_pro_review_impact'));
   assert.equal(JSON.parse(resp.result.content[0].text).decision, 'PACKET_READY');
   assert.equal(bad.result.isError, true);
@@ -109,5 +113,6 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   assert.equal(plan.dispatch.beforeDraft[0], 'novelos-pro-arbiter');
   assert.equal(plan.dispatch.writer, 'novelos-pro-gemini');
   assert.equal(JSON.parse(impact.result.content[0].text).decision, 'STALE_BASELINE');
+  assert.equal(JSON.parse(prepared.result.content[0].text).decision, 'READY_TO_WRITE');
   assert.deepEqual(fs.readdirSync(vault), []);
 });

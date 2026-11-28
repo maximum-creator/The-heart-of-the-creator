@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { auditRawProseDelivery } from '../eval/raw-prose-delivery-audit.mjs';
 
 const endMarker = '[NOVELOS END]';
-const titlePattern = /^(?=.{1,80}$)(?:第[\p{L}\p{N}]{1,10}[章回节][ \t·：:]*)?(?=.*[\p{L}\p{N}])[\p{L}\p{N} \t·：:，、—–—（）()《》「」“”‘’\-]+$/u;
+const titlePattern = /^(?=.{1,80}$)(?:第[\p{L}\p{N}]{1,10}[章回节][ \t·：:]*)?(?=.*[\p{L}\p{N}])[\p{L}\p{N} \t·：:，、？！?!—–（）()《》「」“”‘’\-]+$/u;
 const required = ['viewpoint', 'openingPressure', 'readerPromise', 'choiceAndCost', 'endChange'];
 const count = (s) => [...s].length;
 const digest = (s) => createHash('sha256').update(s, 'utf8').digest('hex');
@@ -13,11 +13,13 @@ const list = (value, min, max, cap) => Array.isArray(value) && value.length >= m
 export function checkPacket(packet = {}) {
   const errors = [];
   for (const key of required) if (!bounded(packet[key], 1, 450)) errors.push(key);
-  if (!list(packet.hardFacts, 1, 10, 250)) errors.push('hardFacts');
+  if (!list(packet.hardFacts, 0, 10, 250)) errors.push('hardFacts');
+  if (packet.designConstraints !== undefined && !list(packet.designConstraints, 0, 5, 220)) errors.push('designConstraints');
+  if (packet.duePayoffs !== undefined && !list(packet.duePayoffs, 0, 10, 250)) errors.push('duePayoffs');
   if (!list(packet.openChoices, 1, 5, 220)) errors.push('openChoices');
   if (packet.voiceNotes !== undefined && !list(packet.voiceNotes, 0, 3, 80)) errors.push('voiceNotes');
   if (packet.previousTail !== undefined && !bounded(packet.previousTail, 0, 600)) errors.push('previousTail');
-  const known = [...required, 'hardFacts', 'openChoices', 'voiceNotes', 'previousTail'];
+  const known = [...required, 'hardFacts', 'designConstraints', 'duePayoffs', 'openChoices', 'voiceNotes', 'previousTail'];
   const unknown = Object.keys(packet).filter((key) => !known.includes(key));
   if (unknown.length) errors.push('unexpected: ' + unknown.join(', '));
   const text = JSON.stringify(packet);
@@ -26,12 +28,10 @@ export function checkPacket(packet = {}) {
   return { decision: 'PACKET_READY', chars: count(text), packetSha256: digest(text), packet };
 }
 
-export function checkDelivery({ raw, finishReason, finishEvidence } = {}) {
+export function checkDelivery({ raw, finishReason } = {}) {
   if (!bounded(raw, 1, 30000)) throw new Error('Missing or oversized raw response');
   const rawSha256 = digest(raw);
   const stop = String(finishReason ?? 'unknown').toLowerCase();
-  const observedStop = finishEvidence?.scope === 'UPSTREAM_RESPONSE'
-    && typeof finishEvidence.reference === 'string' && !!finishEvidence.reference.trim();
   if (!['stop', 'end_turn', 'stop_sequence', 'unknown'].includes(stop)) {
     return { decision: 'INCOMPLETE_RAW', rawSha256, finishReason: stop };
   }
@@ -44,7 +44,7 @@ export function checkDelivery({ raw, finishReason, finishEvidence } = {}) {
   if (audit.failures.length || /[，、：；,:;]$/u.test(prose)) {
     return { decision: 'BLOCK_DELIVERY', rawSha256, finishReason: stop, failures: audit.failures, endsMidClause: /[，、：；,:;]$/u.test(prose) };
   }
-  return { decision: stop === 'unknown' || !observedStop ? 'REVIEW_WITHOUT_STOP_RECEIPT' : 'READY_FOR_READING',
+  return { decision: 'REVIEW_WITHOUT_STOP_RECEIPT',
     rawSha256, proseSha256: digest(prose), finishReason: stop, prose };
 }
 

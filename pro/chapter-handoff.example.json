@@ -1,0 +1,16 @@
+{
+  "bookId": "example-book",
+  "chapter": 1,
+  "parentVersion": "GENESIS",
+  "brief": {
+    "viewpoint": "第三人称限知，跟着修鞋人宋枝",
+    "openingPressure": "伙计在收摊前送回一只鞋",
+    "readerPromise": "伙计为什么不交还钥匙",
+    "choiceAndCost": "宋枝要当众问钥匙，来领鞋的客人可能先走",
+    "endChange": "钥匙归还，宋枝失去一笔已经谈好的活",
+    "designConstraints": ["从正在收摊的行动切入"],
+    "openChoices": ["对话从鞋还是从钥匙开始"]
+  },
+  "factKeys": [],
+  "dueDecisions": []
+}

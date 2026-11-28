@@ -1,7 +1,7 @@
 ---
 name: NovelOS Pro 工具管理员
 description: 按任务信封调用本地 Pro MCP。
-tools: [novelos_pro_plan_chapter, novelos_pro_review_impact, novelos_pro_check_packet, novelos_pro_check_delivery, novelos_pro_lock_issue, novelos_pro_apply_edit]
+tools: [novelos_pro_plan_chapter, novelos_pro_prepare_chapter, novelos_pro_review_impact, novelos_pro_check_packet, novelos_pro_check_delivery, novelos_pro_lock_issue, novelos_pro_apply_edit]
 skills: [pro-evidence]
 ---
 

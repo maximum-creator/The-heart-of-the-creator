@@ -18,23 +18,31 @@ node NovelOS/tools/pro/runtime-audit.mjs model-routes.json novelos-pro-dramaturg
 
 | 命令 | 入参 | 行为 |
 |---|---|---|
+| prepare | vault、章前 JSON | 从批准快照编译章包、处理到期项并返回 READY_TO_WRITE |
+| receipt | vault、本地捕获的回执 JSON | 只由本地操作者登记实际调用证据，回执按 runId 不可覆盖 |
 | raw | vault、候选 JSON 文件 | 留存逐字响应，截断稿也能保存 |
 | inspect | vault、候选 JSON 文件 | 检查章节、前版、稿件、修订与当前差量，返回给审计员要绑定的哈希 |
 | stage | vault、候选 JSON 文件 | 确认连续性审计针对当前稿件和差量，把完整候选不可覆盖地保存 |
+| review | vault、bookId、runId | 给作者查看原稿、终稿、局部差异、状态提案与当前候选哈希 |
+| impact | vault、拟修旧章 JSON | 比对拟改稿尾段并查下游影响，仅返回报告 |
 | approve | vault、bookId、runId、候选哈希、作者批准引用 | **由作者本地执行**。核验后一次性发布当前章正文和状态快照。没有上游停止回执时再传 `--manual-delivery-reviewed` |
 | context | vault、bookId、必要状态键列表 | 从最新已批准快照提取最多 10 条指定事实及 600 字原文尾段，未找到的键单列 |
 | read | vault、bookId | 作者读取最新批准快照，适用于核对与备份 |
 
 候选关键字段见包内 `canon-candidate.example.json`。审计员核对上一批准快照、锁定的最终正文和候选差量，逐条确认知识来源、人物承诺、位置与物件变化。通过后把前版、finalSha256、changesSha256、PASS 和审计记录引用填进 audit。MCP 的局部替换回执只能确认修改范围。审计结论的内容仍需真实的人或独立审计岗位判断。
 
-新候选填 `evidenceKeys`，列出实际采用的已批准事实键，无继承事实时用空数组。把 inspect 返回的 `evidenceSha256` 加入 audit 后再暂存。已有候选可继续读写，缺依赖记录的旧批准章在影响报告中列为待人工复核。
+正式开写前执行 `prepare` 或调用同名 MCP 工具。输入示例见 `chapter-handoff.example.json`。候选原样保留返回的 `handoff` 和 `packet`。审计通过时将 inspect 返回的 `handoffSha256`、`evidenceSha256`、`rawSha256`、`receiptSha256`、`finalSha256` 和 `changesSha256` 写入 audit。有新版批准记录后，下一章要求同样的 handoff。旧版候选保留兼容入口，缺依赖时需人工复核。
+
+可先保存 raw。若能捕获真实调用，在审计和暂存前用 `receipt` 登记 JSON。字段包括 `bookId`、`chapter`、`runId`、`parentVersion`、`handoffSha256`、`packetSha256`、`rawSha256`、`scope`（`UPSTREAM_REQUEST_AND_RESPONSE`）、`requestId`、`actualModel`、`effort`、`maxOutputTokens` 和 `finishReason`。原稿哈希可从 raw 命令的回执取得。只登记实际观察到的值，MCP 不写回执也不验签。只有引用字符串的旧稿走人工复核。找不到匹配回执时审计绑定 `receiptSha256: null`，作者核实后明确确认完整性。回执与另一个章包、原稿或终止原因相冲突时，停止审定并保存原始记录。一个已经暂存的人工复核候选仍需人工确认，即使后来补了匹配的结束回执。晚到的截断或冲突回执会拦住批准。
 
 给需要长期追踪的 `promise:` 或 `foreshadow:` 差量加 `thread`，例如 `{"id":"铺门旧账","dueChapter":24,"status":"open"}`。兑现时提交带正文出处的变更并设为 `resolved`，批准后调度停止提醒，快照保留最初埋设位置和当前证据。
 
 ```powershell
+node NovelOS/tools/pro/canon.mjs prepare <vault> chapter-handoff.example.json
 node NovelOS/tools/pro/canon.mjs raw <vault> canon-candidate.example.json
 node NovelOS/tools/pro/canon.mjs inspect <vault> canon-candidate.example.json
 node NovelOS/tools/pro/canon.mjs stage <vault> canon-candidate.example.json
+node NovelOS/tools/pro/canon.mjs review <vault> example-book chapter-01-a
 node NovelOS/tools/pro/canon.mjs approve <vault> example-book chapter-01-a <候选SHA256> <作者批准记录> --manual-delivery-reviewed
 node NovelOS/tools/pro/canon.mjs context <vault> example-book "knowledge:伙计.钥匙位置"
 ```

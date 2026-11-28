@@ -100,6 +100,6 @@ MIT License。你可以使用、修改和分发，但模型服务、FeelFish 及
 
 ## NovelOS Pro
 
-[NovelOS Pro 1.4.0](pro/README.md) 是独立的本地长篇连载方案。Carbon 主笔，Opus 辅助创作，Sol 导演与审计，Astra 卷级复核，Sonnet 负责场景、盲读和局部精修。Pro MCP 提供跨章取证、伏笔到期提示和旧章影响预览。
+[NovelOS Pro 1.5.0](pro/README.md) 是独立的本地长篇连载方案。Carbon 主笔，Opus 辅助创作，Sol 导演与审计，Astra 卷级复核，Sonnet 负责场景、盲读和局部精修。Pro MCP 提供批准章包、写作回执核对和旧章影响预览，作者通过本地工具终审。
 
 用 `node scripts/build-novelos-pro.mjs <尚不存在的本地目录>` 生成可导入 FeelFish 的独立项目。
