@@ -151,6 +151,49 @@ export function saveRaw(root, { bookId, runId, chapter, parentVersion, raw, fini
   return { decision: 'RAW_SAVED', delivery: delivery.decision, rawSha256: delivery.rawSha256 };
 }
 
+export function readSavedRaw(root, { bookId, runId }) {
+  const book = bookRoot(root, bookId, false);
+  const runs = path.dirname(runDirectory(book, runId, '.workflow'));
+  const file = path.join(runs, runId + '.raw.json');
+  need(fs.existsSync(file), 'Capture the raw delivery before preparing a draft');
+  const record = read(file);
+  need(record.bookId === bookId && record.runId === runId && record.rawSha256 === digest(record.raw),
+    'Saved raw delivery does not match the run or its hash');
+  return record;
+}
+
+export function readSavedCandidate(root, { bookId, runId, candidateSha256 }) {
+  need(typeof candidateSha256 === 'string' && hex.test(candidateSha256), 'Use the exact saved candidate hash');
+  const candidate = findCandidate(bookRoot(root, bookId, false), bookId, runId, candidateSha256);
+  need(candidate, 'Requested draft version was not saved in this run');
+  return candidate;
+}
+
+export function workflowRecord(root, { bookId, runId }, step, payload) {
+  need(/^(prepare|capture|(?:edit|draft)-[a-f0-9]{64})$/u.test(step), 'Invalid local workflow step');
+  const book = bookRoot(root, bookId, payload !== undefined);
+  const dir = runDirectory(book, runId, '.workflow', payload !== undefined);
+  const file = path.join(dir, step + '.json');
+  if (payload !== undefined) {
+    const body = { schema: 1, bookId, runId, step, payload };
+    const record = { ...body, sha256: digest(json(body)) };
+    writeOnce(file, record);
+    return record;
+  }
+  if (!fs.existsSync(file)) return null;
+  const { sha256, ...body } = read(file);
+  need(body.schema === 1 && body.bookId === bookId && body.runId === runId
+    && body.step === step && sha256 === digest(json(body)), 'Local workflow record is corrupted or belongs to another run');
+  return { ...body, sha256 };
+}
+
+export function listWorkflowDrafts(root, { bookId, runId }) {
+  const dir = runDirectory(bookRoot(root, bookId, false), runId, '.workflow');
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).filter((name) => /^draft-[a-f0-9]{64}\.json$/u.test(name)).sort()
+    .map((name) => name.slice(6, -5));
+}
+
 const previousTail = (head) => [...(head.final ?? '')].slice(-600).join('');
 const dueKeys = (head) => Object.keys(head.facts).filter((key) =>
   head.facts[key].thread?.status === 'open' && head.facts[key].thread.dueChapter <= head.chapter + 1).sort();

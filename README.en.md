@@ -116,4 +116,4 @@ See [Contributing](CONTRIBUTING.md), the [changelog](CHANGELOG.md), and the [min
 
 ## NovelOS Pro
 
-[NovelOS Pro 1.12.0](pro/README.md) is a separate local FeelFish setup for serial fiction and scripts. It supports scoped positioning evidence, optional ensemble scene briefs, multi-round rework, and author-selected approvals.
+[NovelOS Pro 1.13.0](pro/README.md) is a separate local FeelFish setup for serial fiction and scripts. It supports scoped positioning evidence, optional ensemble scene briefs, multi-round rework, and author-selected approvals.

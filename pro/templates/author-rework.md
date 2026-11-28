@@ -21,6 +21,8 @@
 
 ## 同一写作运行的后续返工
 
+新运行可用 [本机入口](local-run.md) 根据归档候选锁段、应用替换并送独立审核。旧运行可继续直接使用下列 Canon 命令。
+
 1. 用 `canon.mjs rework-save <vault> <本轮候选.json>` 把待审稿或失败稿留在同一 runId 下。第一版也可来自原先已暂存的候选。终稿未定时先归档，再登记独立复审报告。审核无法通过的版本依然可查看；越界、错版本或结构无效的补丁不会登记成候选稿。
 2. 用 `canon.mjs rework-history <vault> <bookId> <runId> [候选哈希]` 或只读 MCP 查看版本链。指定哈希可看到该版全文、上一版正文、这轮改动及复审。再点段时从这一版的 final 取引文。新候选填 `parentCandidateSha256`，沿用同一章包、运行编号和逐字原稿。旧轮的问题继续留在终审，父轮的阻断项或待裁决项由后续报告 `priorBlockers` 逐条给 key、decision、quote 和 note。若改后稿的父轮尚无复审，先补父轮判断。
 3. 回退时可以读取任一旧版继续返工，也可以重新选择有质量报告且无阻断项的旧版。用 `canon.mjs rework-select <vault> <选择记录.json>`，文件含 `bookId`、`runId`、`candidateSha256`、`authorRef` 和 `expectedEventSha256`，最后一项取版本目录的 `decisionHistoryHead.eventSha256`。如果你已经选过一版、看完又决定继续改，把 `candidateSha256` 写为 null 就能撤回该选择，旧凭据随即失效。

@@ -1,4 +1,4 @@
-# NovelOS Pro 1.12.0 · 长篇连载与剧本方案
+# NovelOS Pro 1.13.0 · 长篇连载与剧本方案
 
 独立于 NovelOS 标准版的 FeelFish 方案。全部模型走 FeelFish 积分。Carbon 一章一稿，Sonnet 做常规审读和局修，Opus 按需辅助，Sol 负责导演与连续性审计，Astra 只复核卷级冲突。作者本地批准正式设定。
 
@@ -11,6 +11,10 @@
 FeelFish 导入文件给出目标模型和默认思考档。安装后需用脱敏回执核对实际模型、档位和输出预算。用 FeelFish 的执行过程核对子智能体调用；本机 MCP 回执单独保存在私有工作区。客户端只显示开关时，保留思考档待核验。
 
 官方文档见 [FeelFish 自定义方案](https://www.feelfish.com/zh/docs/custom-agent-solution)、[自定义模型](https://www.feelfish.com/zh/docs/custom-model)、[Gemini 4 Carbon](https://aistudio.google.com/docs/models/gemini-4-carbon) 和 [OpenAI API 更新记录](https://developers.openai.com/api/docs/changelog)。
+
+## 本机运行入口
+
+用 `node NovelOS/tools/pro/run.mjs` 接续章前准备、逐字原稿、再点段和独立审查看稿。收到工具的暂停结果时，只提交对应作者或模型判断。工具返回审查通过的候选后，由作者在原有 Canon 入口选稿并确认批准。见 [运行命令和输入字段](templates/local-run.md)。
 
 ## 本机直接检查
 
