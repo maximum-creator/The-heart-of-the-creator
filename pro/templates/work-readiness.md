@@ -11,6 +11,12 @@ node NovelOS/tools/pro/work-readiness.mjs <终审文件.json> <本地成稿.txt>
 
 ## 立项
 
+定位可以先于完整卷纲。调用 `novelos_pro_evaluate_work` 传 `phase: POSITIONING`、`format` 和 `story.audience`、`story.positioning` 即可。包内 `templates/positioning.example.json` 可用同一 CLI 运行。
+
+定位只需要进门承诺 `clickPromise`、追读理由 `reasonToReturn`、题材辨识度 `differentiator`、首次兑现 `firstPayoff` 和试读验证点 `testSignal`。另填作品阶段 `stage`、观察截点 `asOf`（YYYY-MM-DD）以及本项目自定的 `maxAgeDays` 和 `minSampleSize`。可比较记录填 `platform`、`segment`、`stage`、`observedOn`、`sampleSize`、`signal`（DISCOVERY 或 CONTINUATION）和 `direction`（FAVORABLE、UNFAVORABLE 或 MIXED）。
+
+平台、读者或阶段不匹配，日期过旧、未来或无效，样本不足，都会分别提示。榜单、同类作品和创作猜测可保留为背景。只有进门证据时，追读仍是待验证。两种信号都覆盖时也保留各自方向，工具报告证据范围，记录是否真实及作品能否起量由后续实际反馈判断。
+
 `story` 包含 `workId`、`premise`、`continuationEngine`、`audience` 和按顺序排列的四段 `beats`。读者资料填 `platform`、`segment`、`promise`。证据列表逐条填 `kind`、`source`、`observation`。同类作品为 `COMPARABLE`，未验证判断为 `HYPOTHESIS`，实际平台资料和目标人群访谈分别为 `PLATFORM_DATA`、`TARGET_INTERVIEW`。
 
 四段依次为 `SETUP`、`CHOICE`、`PAYOFF`、`HANDOFF`。每段给递增的 `position`、`sourceRef` 和可观察的 `change`；从第二段起用 `because` 说明前一段怎样造成下一段。选择段同时给 `choice` 与 `cost`，承接段给 `openQuestion`。已有文本和计划中的章节都可引用，标明各自来源。缺完整卷纲时保留缺项。

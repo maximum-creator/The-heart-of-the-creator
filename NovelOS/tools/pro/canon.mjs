@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { checkPacket, checkDelivery, applyEdit } from './workflow.mjs';
 import { matchesRuntimeModel } from './runtime-audit.mjs';
 import { openReviewKeys, validateQualityReview } from './quality-review.mjs';
+import { prepareCastActions } from './story-prep.mjs';
 
 const digest = (s) => crypto.createHash('sha256').update(s, 'utf8').digest('hex');
 const json = (value) => JSON.stringify(value, null, 2) + '\n';
@@ -180,11 +181,13 @@ function compileHandoff(base, input) {
   const { chapter, parentVersion, brief, factKeys, dueDecisions, requiresReading } = input;
   need(base.bookId === input.bookId && chapter === base.chapter + 1 && parentVersion === base.version, 'Stale chapter handoff');
   need(brief && typeof brief === 'object' && !Array.isArray(brief)
-    && !['previousTail', 'hardFacts', 'duePayoffs'].some((key) => Object.hasOwn(brief, key)), 'Handoff brief cannot supply Canon prose or the previous tail');
+    && !['previousTail', 'hardFacts', 'duePayoffs', 'castActions'].some((key) => Object.hasOwn(brief, key)),
+  'Handoff brief cannot supply Canon prose, the previous tail or unbound cast actions');
   need(validFactKeys(factKeys, 10) && new Set(factKeys).size === factKeys.length, 'Invalid handoff fact keys');
   need(requiresReading === undefined || typeof requiresReading === 'boolean', 'Invalid independent reading requirement');
   const keys = [...factKeys].sort();
   need(keys.every((key) => Object.hasOwn(base.facts, key)), 'Handoff fact missing from approved baseline');
+  const castActions = prepareCastActions(input, keys);
   const due = dueKeys(base);
   need(Array.isArray(dueDecisions) && dueDecisions.length === due.length, 'Every due story thread needs a disposition');
   const byKey = new Map(dueDecisions.map((item) => [item?.key, item]));
@@ -201,11 +204,11 @@ function compileHandoff(base, input) {
   const normalizedBrief = Object.fromEntries(Object.entries(brief).sort(([a], [b]) => a.localeCompare(b, 'en')));
   const packetResult = checkPacket({ ...normalizedBrief, hardFacts: keys.map((key) => base.facts[key].value),
     duePayoffs: decisions.filter((item) => item.action === 'PAYOFF').map(({ key }) => base.facts[key].value),
-    previousTail: previousTail(base) });
+    previousTail: previousTail(base), ...(castActions && { castActions }) });
   need(packetResult.decision === 'PACKET_READY', 'Compiled packet failed: ' + packetResult.errors?.join(', '));
   const evidence = Object.fromEntries(keys.map((key) => [key, base.facts[key]]));
   const handoff = { bookId: base.bookId, chapter, parentVersion, brief: normalizedBrief, factKeys: keys, dueDecisions: decisions,
-    ...(requiresReading !== undefined && { requiresReading }) };
+    ...(requiresReading !== undefined && { requiresReading }), ...(castActions && { sceneMode: 'ENSEMBLE', castActions }) };
   const handoffSha256 = digest(json({ handoff, packetSha256: packetResult.packetSha256, evidence }));
   return { handoff, handoffSha256, packet: packetResult.packet, packetSha256: packetResult.packetSha256, evidence };
 }

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { assessPositioning } from './story-prep.mjs';
 
 const hash = (data) => createHash('sha256').update(data).digest('hex');
 const text = (value, max = 500) => typeof value === 'string' && Boolean(value.trim()) && value.length <= max;
@@ -36,14 +37,20 @@ export const workProfiles = {
   },
 };
 
+function validateAudience(audience) {
+  const missing = ['platform', 'segment', 'promise'].filter((key) => !text(audience?.[key]))
+    .map((key) => 'story.audience.' + key);
+  const evidence = audience?.evidence;
+  if (!Array.isArray(evidence) || evidence.length > 10 || !evidence.every((item) =>
+    marketKinds.includes(item?.kind) && text(item.source, 300) && text(item.observation))) missing.push('story.audience.evidence');
+  return missing;
+}
+
 function validatePlan(story, unit, profile) {
   const gaps = [];
   const need = (ok, path) => { if (!ok) gaps.push(path); };
   for (const key of ['workId', 'premise', 'continuationEngine']) need(text(story?.[key]), 'story.' + key);
-  for (const key of ['platform', 'segment', 'promise']) need(text(story?.audience?.[key]), 'story.audience.' + key);
-  const market = story?.audience?.evidence;
-  need(Array.isArray(market) && market.length <= 10 && market.every((item) =>
-    marketKinds.includes(item?.kind) && text(item.source, 300) && text(item.observation)), 'story.audience.evidence');
+  gaps.push(...validateAudience(story?.audience));
   const beats = story?.beats;
   need(Array.isArray(beats) && beats.length === phases.length, 'story.beats');
   let previous = 0;
@@ -92,11 +99,24 @@ function schedule(risks) {
 }
 
 export function evaluateWorkReadiness(input = {}) {
-  const { format, story, unit, review, artifact } = input;
+  const { format, phase, story, unit, review, artifact } = input;
   const profile = Object.hasOwn(workProfiles, format) ? workProfiles[format] : null;
   if (!profile) return { decision: 'UNKNOWN_FORMAT', supportedFormats: Object.keys(workProfiles) };
+  if (phase !== undefined && phase !== 'POSITIONING') return { decision: 'UNKNOWN_PHASE', format };
+  if (phase === 'POSITIONING') {
+    const missing = validateAudience(story?.audience);
+    if (missing.length) return { decision: 'RETURN_TO_DEVELOPMENT', format, missing, owner: 'novelos-pro-director' };
+    const evidence = assessPositioning(story.audience, story.positioning);
+    if (evidence.missing || story.positioning === undefined) return { decision: 'RETURN_TO_DEVELOPMENT', format,
+      missing: evidence.missing?.map((key) => 'story.positioning.' + key) ?? ['story.positioning'], owner: 'novelos-pro-director' };
+    return { decision: 'POSITIONING_REVIEW', format, owner: 'novelos-pro-director', marketBasis: evidence.basis,
+      positioning: story.positioning, positioningEvidence: evidence };
+  }
   const missing = validatePlan(story, unit, profile);
   if (missing.length) return { decision: 'RETURN_TO_DEVELOPMENT', format, missing, owner: 'novelos-pro-director' };
+  const positioning = assessPositioning(story.audience, story.positioning);
+  if (positioning.missing) return { decision: 'RETURN_TO_DEVELOPMENT', format,
+    missing: positioning.missing.map((key) => 'story.positioning.' + key), owner: 'novelos-pro-director' };
 
   const storyPlanSha256 = hash(JSON.stringify(story));
   const workPlanSha256 = hash(JSON.stringify({ format, storyPlanSha256, unit }));
@@ -104,8 +124,7 @@ export function evaluateWorkReadiness(input = {}) {
     format, storyPlanSha256, workPlanSha256,
     order: { format, unit, audience: { segment: story.audience.segment, promise: story.audience.promise },
       delivery: profile.delivery, reviewChecks: profile.checks, dispatch: schedule(unit.risks) },
-    marketBasis: story.audience.evidence.some(({ kind }) => kind === 'PLATFORM_DATA' || kind === 'TARGET_INTERVIEW')
-      ? 'DECLARED_MARKET_OBSERVATION' : 'POSITIONING_HYPOTHESIS',
+    marketBasis: positioning.basis, positioningEvidence: positioning,
   };
   if (!review) return { decision: 'READY_TO_PLAN_DRAFT', ...result };
   if (!['OFFLINE_FIXTURE', 'LIVE_REVIEW'].includes(review.scope)) return { decision: 'REVIEW_INCOMPLETE', ...result, missing: ['review.scope'] };

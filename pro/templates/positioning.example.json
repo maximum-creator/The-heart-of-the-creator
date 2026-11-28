@@ -1,0 +1,25 @@
+{
+  "format": "NOVEL",
+  "phase": "POSITIONING",
+  "story": {
+    "audience": {
+      "platform": "示例平台",
+      "segment": "示例市井悬疑读者",
+      "promise": "看一场公开承诺怎样兑现",
+      "evidence": [
+        { "kind": "HYPOTHESIS", "source": "离线立项示例", "observation": "读者可能会继续追公开承诺的结果" }
+      ]
+    },
+    "positioning": {
+      "stage": "开篇验证",
+      "asOf": "2026-11-28",
+      "maxAgeDays": 30,
+      "minSampleSize": 5,
+      "clickPromise": "一次公开承诺让人物不得不作选择",
+      "reasonToReturn": "读者想看到选择是如何改变关系和生计的",
+      "differentiator": "从普通人的生活筹码切入",
+      "firstPayoff": "第一段情节结束时，读者能看到一个明确的选择后果",
+      "testSignal": "请目标读者复述未兑现的承诺并说明继续读的理由"
+    }
+  }
+}

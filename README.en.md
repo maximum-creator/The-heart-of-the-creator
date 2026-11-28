@@ -116,4 +116,4 @@ See [Contributing](CONTRIBUTING.md), the [changelog](CHANGELOG.md), and the [min
 
 ## NovelOS Pro
 
-[NovelOS Pro 1.10.0](pro/README.md) is a separate local FeelFish setup for serial fiction and scripts. Four formats share a story plan. Multiple rework rounds preserve the original, retain each candidate and its review, and publish only the version explicitly selected by the author.
+[NovelOS Pro 1.11.0](pro/README.md) is a separate local FeelFish setup for serial fiction and scripts. It supports scoped positioning evidence, optional ensemble scene briefs, multi-round rework, and author-selected approvals.

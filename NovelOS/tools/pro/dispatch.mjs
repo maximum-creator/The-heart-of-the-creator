@@ -15,6 +15,7 @@ export const chapterPlanSchema = {
     parentVersion: { type: 'string', pattern: '^(GENESIS|[a-f0-9]{64})$' },
     requiredFactKeys: { type: 'array', maxItems: 10, items: { type: 'string' } },
     activeThreads: { type: 'array', maxItems: 10, items: { type: 'string' } },
+    sceneMode: { enum: ['SINGLE_FOCUS', 'ENSEMBLE'] },
     risks: { type: 'array', uniqueItems: true, items: { enum: risks } },
   },
   required: ['bookId', 'chapter', 'parentVersion', 'requiredFactKeys', 'risks'],
@@ -23,9 +24,10 @@ export const chapterPlanSchema = {
 
 export function planChapter(vault, input = {}) {
   if (!vault) throw new Error('Set NOVELOS_PRO_VAULT to an existing private Canon directory');
-  const { bookId, chapter, parentVersion, requiredFactKeys, risks: flags, activeThreads = [] } = input;
+  const { bookId, chapter, parentVersion, requiredFactKeys, risks: flags, activeThreads = [], sceneMode } = input;
   if (!Number.isSafeInteger(chapter) || chapter < 1 || chapter > 99999999
     || typeof parentVersion !== 'string' || !/^(GENESIS|[a-f0-9]{64})$/u.test(parentVersion)
+    || (sceneMode !== undefined && !['SINGLE_FOCUS', 'ENSEMBLE'].includes(sceneMode))
     || !Array.isArray(requiredFactKeys) || !Array.isArray(flags)
     || flags.length > risks.length || new Set(flags).size !== flags.length
     || flags.some((flag) => !risks.includes(flag))) throw new Error('Invalid chapter plan identity, keys or risk flags');
@@ -52,6 +54,7 @@ export function planChapter(vault, input = {}) {
   ];
   return {
     decision: 'READY_FOR_HANDOFF', mode, bookId, chapter, parentVersion, risks: detected, requiresReading,
+    ...(sceneMode && { sceneMode, requiresCastActions: sceneMode === 'ENSEMBLE' }),
     dispatch: { director: 'novelos-pro-director', beforeDraft, writer: 'novelos-pro-gemini', afterDraft },
     context,
   };

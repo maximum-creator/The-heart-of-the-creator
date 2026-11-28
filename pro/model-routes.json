@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "edition": "NovelOS Pro",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "roles": {
     "novelos-pro-director": {
       "name": "总导演",

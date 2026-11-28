@@ -29,6 +29,8 @@
 
 `READY_FOR_HANDOFF` 表示基准匹配、请求的事实齐全并已产出调度单。它允许导演按序执行，前置复核的结论仍需记录。`STALE_BASELINE` 或 `MISSING_EVIDENCE` 时停在取证。核对事实应回到结果中的章节、引句和稿件哈希。
 
+群像章把调度单标为 `sceneMode: ENSEMBLE`，在 prepare 实参顶层附 `castActions`，不要写进 `brief`。每条填写 `character`、`goal`、`leverage`、`knowledgeBoundary`、`action`、`affects` 和 `consequence`；`affects` 是受影响的另一位在场人物。可用 `knownFactKeys` 绑定本角色实际可用的已批准事实。私人知情键用 `knowledge:角色.事项`，并列入本章请求事实。从旧稿或大纲得出的场景边界留在 `knowledgeBoundary`，不凭这条描述更新正式事实。普通章不带行动表，启用群像数据不会自动增加岗位调用。
+
 等前置复核完成，再用 `novelos_pro_prepare_chapter` 提交章务 `brief`、`factKeys` 和完整 `dueDecisions`。每条到期项填 `key`、`action`、`reason`。兑现选择 `PAYOFF` 并把对应事实列入 `factKeys`，延期选择 `DEFER` 并提供将来的 `dueChapter`。需要作者裁决时填写 `AUTHOR_REVIEW`，留在筹备阶段。章务的 `designConstraints` 用于记录本章设计，MCP 从批准快照单独生成 `hardFacts` 和上章尾段。主笔只收工具返回的 `packet`。
 
 ## 拟修旧章

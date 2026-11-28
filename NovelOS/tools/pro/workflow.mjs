@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { auditRawProseDelivery } from '../eval/raw-prose-delivery-audit.mjs';
 import { applyAuthorRework } from './rework.mjs';
+import { validateCastActions } from './story-prep.mjs';
 
 const endMarker = '[NOVELOS END]';
 const titlePattern = /^(?=.{1,80}$)(?:第[\p{L}\p{N}]{1,10}[章回节][ \t·：:]*)?(?=.*[\p{L}\p{N}])[\p{L}\p{N} \t·：:，、？！?!—–（）()《》「」“”‘’\-]+$/u;
@@ -17,10 +18,11 @@ export function checkPacket(packet = {}) {
   if (!list(packet.hardFacts, 0, 10, 250)) errors.push('hardFacts');
   if (packet.designConstraints !== undefined && !list(packet.designConstraints, 0, 5, 220)) errors.push('designConstraints');
   if (packet.duePayoffs !== undefined && !list(packet.duePayoffs, 0, 10, 250)) errors.push('duePayoffs');
+  if (packet.castActions !== undefined) errors.push(...validateCastActions(packet.castActions));
   if (!list(packet.openChoices, 1, 5, 220)) errors.push('openChoices');
   if (packet.voiceNotes !== undefined && !list(packet.voiceNotes, 0, 3, 80)) errors.push('voiceNotes');
   if (packet.previousTail !== undefined && !bounded(packet.previousTail, 0, 600)) errors.push('previousTail');
-  const known = [...required, 'hardFacts', 'designConstraints', 'duePayoffs', 'openChoices', 'voiceNotes', 'previousTail'];
+  const known = [...required, 'hardFacts', 'designConstraints', 'duePayoffs', 'openChoices', 'voiceNotes', 'previousTail', 'castActions'];
   const unknown = Object.keys(packet).filter((key) => !known.includes(key));
   if (unknown.length) errors.push('unexpected: ' + unknown.join(', '));
   const text = JSON.stringify(packet);
