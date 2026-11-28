@@ -1,0 +1,27 @@
+{
+  "format": "NOVEL",
+  "story": {
+    "workId": "offline-example",
+    "premise": "公开归还借物",
+    "continuationEngine": "未结清的承诺发生新的冲突",
+    "audience": {
+      "platform": "示例渠道",
+      "segment": "目标类型读者",
+      "promise": "看到公开承诺是否兑现",
+      "evidence": [{ "kind": "HYPOTHESIS", "source": "offline-fixture", "observation": "等待目标读者检验" }]
+    },
+    "beats": [
+      { "phase": "SETUP", "position": 1, "sourceRef": "fixture:1", "change": "约定归还" },
+      { "phase": "CHOICE", "position": 6, "sourceRef": "fixture:6", "change": "约定公开", "because": "先前答应归还", "choice": "公开约定", "cost": "无法私下反悔" },
+      { "phase": "PAYOFF", "position": 12, "sourceRef": "fixture:12", "change": "物件已归还", "because": "在场人都听到过约定" },
+      { "phase": "HANDOFF", "position": 13, "sourceRef": "fixture:13", "change": "旁观者提出另一笔未结事项", "because": "公开归还引来当事人", "openQuestion": "新的承诺怎样处理" }
+    ]
+  },
+  "unit": {
+    "id": "sample-12",
+    "objective": "公开归还",
+    "change": "物件归属变化",
+    "risks": [],
+    "acceptance": { "minParticipants": 4, "minContinueRate": 0.7, "maxReworkMinutes": 60 }
+  }
+}

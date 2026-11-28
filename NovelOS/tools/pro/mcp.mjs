@@ -2,11 +2,15 @@ import readline from 'node:readline';
 import { checkPacket, lockIssue, applyEdit } from './workflow.mjs';
 import { chapterPlanSchema, planChapter } from './dispatch.mjs';
 import { prepareChapter, reviewChapterImpact, verifyChapterDelivery } from './canon.mjs';
+import { evaluateWorkReadiness } from './work-readiness.mjs';
 
 const str = { type: 'string' };
 const object = { type: 'object' };
 const props = (properties, required) => ({ type: 'object', properties, required, additionalProperties: false });
 const tools = [
+  ['novelos_pro_evaluate_work', 'Route a novel, vertical drama, long drama or comic drama work order and check its review evidence.', props({
+    format: { enum: ['NOVEL', 'VERTICAL_DRAMA', 'LONG_DRAMA', 'COMIC_DRAMA'] }, story: object, unit: object, review: object, artifact: str,
+  }, ['format', 'story', 'unit']), evaluateWorkReadiness],
   ['novelos_pro_plan_chapter', 'Plan one chapter with approved evidence, relevant story threads and due payoffs.', chapterPlanSchema,
     (args) => planChapter(process.env.NOVELOS_PRO_VAULT, args)],
   ['novelos_pro_prepare_chapter', 'Compile the writer packet from approved facts and explicit decisions for all due threads.', props({
@@ -41,7 +45,7 @@ for await (const line of loop) {
   const { id, method, params } = request;
   if (method === 'initialize') {
     send({ id, result: { protocolVersion: ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'].includes(params?.protocolVersion) ? params.protocolVersion : '2024-11-05',
-      serverInfo: { name: 'novelos-pro', version: '1.7.0' }, capabilities: { tools: {} } } });
+      serverInfo: { name: 'novelos-pro', version: '1.8.0' }, capabilities: { tools: {} } } });
   } else if (method === 'ping') send({ id, result: {} });
   else if (method === 'tools/list') send({ id, result: { tools: tools.map(([name, description, inputSchema]) => ({ name, description, inputSchema })) } });
   else if (method === 'tools/call') {

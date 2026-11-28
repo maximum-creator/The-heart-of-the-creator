@@ -100,6 +100,8 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
       bookId: 'test-book', chapter: 1, parentVersion: 'GENESIS',
       brief: Object.fromEntries(Object.entries(fixture).filter(([key]) => key !== 'hardFacts')), factKeys: [], dueDecisions: [],
     } } },
+    { id: 8, method: 'tools/call', params: { name: 'novelos_pro_evaluate_work',
+      arguments: { format: 'COMIC_DRAMA', story: {}, unit: {} } } },
   ];
   const vault = path.join(temp, 'vault');
   fs.mkdirSync(vault);
@@ -108,10 +110,10 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
     encoding: 'utf8', input: 'null\n' + rpc.map((x) => JSON.stringify({ jsonrpc: '2.0', ...x })).join('\n') + '\n'
   });
   assert.equal(run.status, 0, run.stderr);
-  const [invalid, init, list, resp, bad, routed, impact, prepared] = run.stdout.trim().split('\n').map(JSON.parse);
+  const [invalid, init, list, resp, bad, routed, impact, prepared, work] = run.stdout.trim().split('\n').map(JSON.parse);
   assert.equal(invalid.error.code, -32600);
-  assert.equal(init.result.serverInfo.version, '1.7.0');
-  assert.equal(list.result.tools.length, 7);
+  assert.equal(init.result.serverInfo.version, '1.8.0');
+  assert.equal(list.result.tools.length, 8);
   assert.deepEqual(bindings.get('novelos-pro-operator').tools,
     list.result.tools.map((tool) => tool.name));
   assert.ok(list.result.tools.some((tool) => tool.name === 'novelos_pro_review_impact'));
@@ -123,6 +125,7 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   assert.equal(plan.dispatch.writer, 'novelos-pro-gemini');
   assert.equal(JSON.parse(impact.result.content[0].text).decision, 'STALE_BASELINE');
   assert.equal(JSON.parse(prepared.result.content[0].text).decision, 'READY_TO_WRITE');
+  assert.equal(JSON.parse(work.result.content[0].text).decision, 'RETURN_TO_DEVELOPMENT');
   assert.deepEqual(fs.readdirSync(vault), []);
 
   const canon = path.join(root, 'NovelOS/tools/pro/canon.mjs');

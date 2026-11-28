@@ -116,4 +116,4 @@ See [Contributing](CONTRIBUTING.md), the [changelog](CHANGELOG.md), and the [min
 
 ## NovelOS Pro
 
-[NovelOS Pro 1.7.0](pro/README.md) is a separate local FeelFish setup for long-form serial fiction. Carbon writes, Opus supports creative decisions, Sol directs and audits continuity, Astra reviews volume-level conflicts, and Sonnet handles scene planning, blind reading, and local edits. Run `node scripts/build-novelos-pro.mjs <new-output-directory>` to produce the Pro import package. The standard edition has its own marketplace package.
+[NovelOS Pro 1.8.0](pro/README.md) is a separate local FeelFish setup for serial fiction and scripts. The shared story plan supports distinct checks for novels, vertical drama, long drama, and comic drama. Carbon writes, Opus supports creative decisions, Sol directs and audits continuity, Astra reviews volume-level conflicts, and Sonnet handles scene planning, blind reading, and local edits.
