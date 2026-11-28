@@ -1,4 +1,4 @@
-# NovelOS Pro 1.6.0 · 长篇连载方案
+# NovelOS Pro 1.7.0 · 长篇连载方案
 
 独立于 NovelOS 标准版的 FeelFish 方案。Carbon 一章一稿，Opus 按需辅助，Sol 负责导演与常规审计，Astra 复核卷级冲突。作者本地批准正式设定。
 
@@ -6,7 +6,7 @@
 
 1. 从仓库根目录运行 `node scripts/build-novelos-pro.mjs <新目录>`，导入生成的 `feelfish.json`。选择自定义方案，确认总导演和十个岗位。
 2. 在模型菜单核对 Carbon、Opus 5.5、Sol、Astra 的可用性。Sonnet 三个岗位使用同一个自定义接口 `novelos-pro-openrouter`（OpenRouter 的 OpenAI 兼容地址和模型名 `anthropic/claude-sonnet-5.5`）。
-3. 用包内 `mcp-config.template.json` 添加本地 stdio 服务，填项目绝对路径和已有的私有 Canon vault 路径。服务进程通过 `NOVELOS_PRO_VAULT` 读取批准快照。七个 Pro 工具只给工具管理员。
+3. 用包内 `mcp-config.template.json` 添加本地 stdio 服务，使用 Node.js 22，填项目绝对路径和已有的私有 Canon vault 路径。服务进程通过 `NOVELOS_PRO_VAULT` 读取批准快照。七个 Pro 工具只给工具管理员。从市场应用方案后，同样需要单独配置本地 MCP。
 
 FeelFish 导入文件给出目标模型和默认思考档。安装后需用脱敏回执核对实际模型、档位和输出预算。Sol/Astra 还需确认实际工具调用，尤其是 Sol 的子智能体分派。OpenAI 直连的原生工具调用使用 Responses API。
 
@@ -28,6 +28,18 @@ FeelFish 导入文件给出目标模型和默认思考档。安装后需用脱�
 | 工具管理员 | MCP 执行，Gemini 3.8 Flash 转交异常 | Low | 2,048 |
 
 默认省略温度和其他采样参数。预算与思考档是运行目标，不同模式以路由表和实际上游回执为准。
+
+## 模型参数与技能分配
+
+| 模型 | 厂商规则 | 本方案使用方式 |
+|---|---|---|
+| Gemini 4 Carbon、Gemini 3.8 Flash | 用思考等级。Carbon 忽略采样参数，Flash 迁移指南要求移除 | Carbon Medium，Flash Low |
+| Claude Opus 5.5、Claude Sonnet 5.5 | 常规调用使用自适应思考和 effort，省略 temperature、top_p、top_k | Opus Medium，Sonnet 架构和独立读者 Medium、局修 Low |
+| GPT-6.2 Sol、GPT-6.2 Astra | 省略 temperature、top_p；OpenAI 原生工具调用使用 Responses API | Sol 日常 Medium、难章 High，Astra High |
+
+FeelFish 通用控件不能证明某个模型支持调温或上游收到了指定思考档。对本方案的五类路由一律省略温度。生成配置中的思考档是目标，不能取得真实回执时保持待核验。
+
+10 个技能都在岗位上有明确调用点。总导演使用调度和卷规划，Astra 使用卷规划和连续性，其余岗位各一项。Carbon、Opus、Sonnet 读者和编辑，以及工具管理员无需文件读取权限，其唯一技能由打包脚本内嵌。长程规则参考 [FeelFish 技能指南](https://www.feelfish.com/zh/docs/build-skills-for-novel)，会话深度参考 [Google 思考档位](https://aistudio.google.com/docs/thinking)、[Anthropic Opus](https://platform.claude.com/docs/en/models/opus-5-5/migration-guide)、[Anthropic Sonnet](https://platform.claude.com/docs/en/models/sonnet-5-5/migration-guide) 和 [OpenAI GPT-6.2](https://developers.openai.com/api/docs/guides/latest-model)。
 
 ## 从卷纲到下一章
 

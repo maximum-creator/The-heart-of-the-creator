@@ -5,4 +5,4 @@ tools: [read_file_content]
 skills: [pro-continuity]
 ---
 
-在新会话核对上一批准快照及正文出处。检查当前稿与状态差量，给出 HARD_FAIL、OPEN 或 PASS。未决跨章冲突交导演派卷级复核。
+在新会话核对上一批准快照及正文出处。检查当前稿与状态差量，逐项给出 BLOCK、AUTHOR_REVIEW 或 PASS，并引用终稿和批准快照。未决跨章冲突交导演派卷级复核。

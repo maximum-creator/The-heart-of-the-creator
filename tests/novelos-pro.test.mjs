@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { buildPro, validateProRoutes } from '../scripts/build-novelos-pro.mjs';
+import { buildPro, loadProBindings, validateProRoutes } from '../scripts/build-novelos-pro.mjs';
 import { applyEdit, checkDelivery, checkPacket, lockIssue } from '../NovelOS/tools/pro/workflow.mjs';
 
 const source = fileURLToPath(new URL('../pro/', import.meta.url));
@@ -48,6 +48,12 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   assert.throws(() => buildPro(root), /EEXIST/);
   const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
   const manifest = JSON.parse(read('model-routes.json'));
+  const bindings = loadProBindings(path.join(root, '.feelfish'), manifest.roles);
+  assert.equal(new Set([...bindings.values()].flatMap(({ skills }) => skills)).size, 10);
+  assert.deepEqual(bindings.get('novelos-pro-director').skills, ['pro-directing', 'pro-series-planning']);
+  assert.deepEqual(bindings.get('novelos-pro-dramaturg').skills, ['pro-scene']);
+  assert.match(read('.feelfish/agents/novelos-pro-operator.md'), /实际捕获回执由本地操作者登记/);
+  assert.match(read('MARKETPLACE.md'), /单独配置本地 Pro MCP/);
   const active = JSON.parse(read('.feelfish/solution.json'));
   const solution = JSON.parse(read('.feelfish/solutions/feelfish-custom.json'));
   assert.equal(solution.primaryAgentId, 'novelos-pro-director');
@@ -99,12 +105,15 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   fs.mkdirSync(vault);
   const run = spawnSync(process.execPath, [path.join(root, 'NovelOS/tools/pro/mcp.mjs')], {
     env: { ...process.env, NOVELOS_PRO_VAULT: vault },
-    encoding: 'utf8', input: rpc.map((x) => JSON.stringify({ jsonrpc: '2.0', ...x })).join('\n') + '\n'
+    encoding: 'utf8', input: 'null\n' + rpc.map((x) => JSON.stringify({ jsonrpc: '2.0', ...x })).join('\n') + '\n'
   });
   assert.equal(run.status, 0, run.stderr);
-  const [init, list, resp, bad, routed, impact, prepared] = run.stdout.trim().split('\n').map(JSON.parse);
-  assert.equal(init.result.serverInfo.version, '1.6.0');
+  const [invalid, init, list, resp, bad, routed, impact, prepared] = run.stdout.trim().split('\n').map(JSON.parse);
+  assert.equal(invalid.error.code, -32600);
+  assert.equal(init.result.serverInfo.version, '1.7.0');
   assert.equal(list.result.tools.length, 7);
+  assert.deepEqual(bindings.get('novelos-pro-operator').tools,
+    list.result.tools.map((tool) => tool.name));
   assert.ok(list.result.tools.some((tool) => tool.name === 'novelos_pro_review_impact'));
   assert.equal(JSON.parse(resp.result.content[0].text).decision, 'PACKET_READY');
   assert.equal(bad.result.isError, true);

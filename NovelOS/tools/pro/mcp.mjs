@@ -32,11 +32,16 @@ for await (const line of loop) {
   let request;
   try { request = JSON.parse(line); }
   catch { send({ id: null, error: { code: -32700, message: 'Invalid JSON' } }); continue; }
-  if (request?.id === undefined) continue;
+  if (!request || typeof request !== 'object' || Array.isArray(request) || request.jsonrpc !== '2.0'
+    || typeof request.method !== 'string' || (Object.hasOwn(request, 'id') && !['string', 'number'].includes(typeof request.id))) {
+    send({ id: null, error: { code: -32600, message: 'Invalid JSON-RPC request' } });
+    continue;
+  }
+  if (request.id === undefined) continue;
   const { id, method, params } = request;
   if (method === 'initialize') {
     send({ id, result: { protocolVersion: ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'].includes(params?.protocolVersion) ? params.protocolVersion : '2024-11-05',
-      serverInfo: { name: 'novelos-pro', version: '1.6.0' }, capabilities: { tools: {} } } });
+      serverInfo: { name: 'novelos-pro', version: '1.7.0' }, capabilities: { tools: {} } } });
   } else if (method === 'ping') send({ id, result: {} });
   else if (method === 'tools/list') send({ id, result: { tools: tools.map(([name, description, inputSchema]) => ({ name, description, inputSchema })) } });
   else if (method === 'tools/call') {

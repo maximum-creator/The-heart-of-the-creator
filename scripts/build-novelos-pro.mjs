@@ -9,19 +9,56 @@ const manifest = JSON.parse(fs.readFileSync(path.join(pro, 'model-routes.json'),
 const json = (file, value) => fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n', { flag: 'wx' });
 const director = 'novelos-pro-director';
 
+export function loadProBindings(source, roles) {
+  const skills = path.join(source, 'skills');
+  const available = new Set(fs.readdirSync(skills, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name));
+  const used = new Set();
+  const bindings = new Map();
+  for (const id of Object.keys(roles)) {
+    const agent = fs.readFileSync(path.join(source, 'agents', id + '.md'), 'utf8').replace(/\r\n/g, '\n');
+    const metadata = agent.match(/^---\n([\s\S]*?)\n---\n/u)?.[1] ?? '';
+    const list = (key) => metadata.match(new RegExp('^' + key + ': \\[([^\\]]*)\\]$', 'm'))?.[1]
+      .split(',').map((item) => item.trim()).filter(Boolean);
+    const tools = list('tools');
+    const selected = list('skills');
+    if (!tools || !selected?.length || selected.length > 2 || new Set(selected).size !== selected.length
+      || tools.includes('all') || selected.some((skill) => !available.has(skill))) throw new Error('Invalid Pro bindings: ' + id);
+    if (id !== 'novelos-pro-operator' && tools.some((tool) => tool.startsWith('novelos_pro_'))) {
+      throw new Error('Pro MCP is restricted to the tool operator: ' + id);
+    }
+    if (!tools.includes('read_file_content') && selected.length !== 1) throw new Error('Inline exactly one Pro skill: ' + id);
+    const definitions = selected.map((skill) => {
+      used.add(skill);
+      const definition = fs.readFileSync(path.join(skills, skill, 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n');
+      const frontmatter = definition.match(/^---\n([\s\S]*?)\n---\n/u);
+      if (!frontmatter?.[1].split('\n').includes('name: ' + skill) || !definition.slice(frontmatter[0].length).trim()) {
+        throw new Error('Invalid Pro skill definition: ' + skill);
+      }
+      return definition.slice(frontmatter[0].length).trim();
+    });
+    bindings.set(id, { agent, tools, skills: selected, definitions });
+  }
+  const orphaned = [...available].filter((skill) => !used.has(skill));
+  if (orphaned.length) throw new Error('Unassigned Pro skills: ' + orphaned.join(', '));
+  return bindings;
+}
+
 export function validateProRoutes(roles) {
   const ids = ['director', 'dramaturg', 'opus', 'gemini', 'reader', 'editor', 'operator', 'continuity', 'curator', 'arbiter'];
   if (Object.keys(roles).length !== ids.length || ids.some((id) => !Object.hasOwn(roles, 'novelos-pro-' + id))) {
     throw new Error('Unexpected role set');
   }
-  for (const [id, { model, cap }] of Object.entries(roles)) {
+  const effortLevels = ['low', 'medium', 'high'];
+  for (const [id, { model, cap, effortByMode }] of Object.entries(roles)) {
     if (!/^novelos-pro-[a-z]+$/.test(id) || !model?.modelId || !model?.modelName || !Number.isInteger(cap) || cap < 1024) {
       throw new Error('Invalid Pro role ' + id);
     }
-    if (!['low', 'medium', 'high'].includes(model.reasoningEffort) || model.enableThinkingMode !== true) {
+    if (!effortLevels.includes(model.reasoningEffort) || model.enableThinkingMode !== true
+      || (effortByMode && Object.entries(effortByMode).some(([mode, effort]) =>
+        !['FAST', 'STANDARD', 'DEEP'].includes(mode) || !effortLevels.includes(effort)))) {
       throw new Error('Invalid Pro thinking settings: ' + id);
     }
-    if (['temperature', 'top_p', 'top_k'].some((key) => Object.hasOwn(model, key))) {
+    if (['temperature', 'top_p', 'top_k', 'topP', 'topK'].some((key) => Object.hasOwn(model, key))) {
       throw new Error('Pro uses provider sampling defaults: ' + id);
     }
   }
@@ -29,25 +66,20 @@ export function validateProRoutes(roles) {
 
 export function buildPro(destination) {
   validateProRoutes(manifest.roles);
+  const source = path.join(pro, '.feelfish');
+  const bindings = loadProBindings(source, manifest.roles);
   const target = path.resolve(destination);
   fs.mkdirSync(target);
   const ff = path.join(target, '.feelfish');
-  fs.cpSync(path.join(pro, '.feelfish'), ff, { recursive: true });
+  fs.cpSync(source, ff, { recursive: true });
   const routing = Object.entries(manifest.roles);
-  for (const [id] of routing) {
-    const agent = path.join(ff, 'agents', id + '.md');
-    let text = fs.readFileSync(agent, 'utf8').replace(/\r\n/g, '\n');
-    // FeelFish can advertise a skill without exposing its body to a tool-free agent.
-    // Inline the canonical instructions at build time for every constrained role.
-    if (/^tools: \[\]$/m.test(text)) {
-      const skill = text.match(/^skills: \[([a-z-]+)\]$/m)?.[1];
-      if (!skill) throw new Error('Tool-free Pro Agent needs one embedded skill: ' + id);
-      const source = fs.readFileSync(path.join(ff, 'skills', skill, 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n');
-      text = text.trimEnd() + '\n\n' + source.replace(/^---\n[\s\S]*?\n---\n/u, '').trim() + '\n';
-      fs.writeFileSync(agent, text);
+  for (const [id, { agent, tools, definitions }] of bindings) {
+    // Embed the only skill where the role cannot read a project file.
+    if (!tools.includes('read_file_content')) {
+      fs.writeFileSync(path.join(ff, 'agents', id + '.md'), agent.trimEnd() + '\n\n' + definitions[0] + '\n');
     }
   }
-  const solution = { version: 1, name: 'NovelOS Pro', primaryAgentId: director,
+  const solution = { version: 1, name: 'NovelOS Pro ' + manifest.version, primaryAgentId: director,
     description: '卷级策划、单稿创作、独立审计、局部精修和作者批准后的章节交接。',
     agents: routing.map(([id, route]) => ({ id, recommendedModel: route.model })) };
   fs.mkdirSync(path.join(ff, 'solutions'));
@@ -55,7 +87,7 @@ export function buildPro(destination) {
   json(path.join(ff, 'solution.json'), { currentSolutionId: 'feelfish-custom',
     agentModels: Object.fromEntries(routing.map(([id, route]) => [id, route.model])) });
   for (const source of ['README.md', 'model-routes.json', 'scene-packet.example.json', 'chapter-handoff.example.json',
-    'runtime-observation.example.json', 'canon-candidate.example.json', 'quality-review.example.json']) {
+    'runtime-observation.example.json', 'canon-candidate.example.json', 'quality-review.example.json', 'MARKETPLACE.md']) {
     fs.copyFileSync(path.join(pro, source), path.join(target, source), fs.constants.COPYFILE_EXCL);
   }
   fs.cpSync(path.join(pro, 'templates'), path.join(target, 'templates'), { recursive: true });
