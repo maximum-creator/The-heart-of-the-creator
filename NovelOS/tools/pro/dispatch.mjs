@@ -45,12 +45,13 @@ export function planChapter(vault, input = {}) {
     ...(flags.includes('creative_difficulty') ? ['novelos-pro-opus'] : []),
     ...(mode !== 'FAST' ? ['novelos-pro-dramaturg'] : []),
   ];
+  const requiresReading = mode !== 'FAST' || chapter <= 3 || flags.includes('sample_review');
   const afterDraft = [
-    ...(mode !== 'FAST' || chapter <= 3 || flags.includes('sample_review') ? ['novelos-pro-reader'] : []),
+    ...(requiresReading ? ['novelos-pro-reader'] : []),
     'novelos-pro-continuity',
   ];
   return {
-    decision: 'READY_FOR_HANDOFF', mode, bookId, chapter, parentVersion, risks: detected,
+    decision: 'READY_FOR_HANDOFF', mode, bookId, chapter, parentVersion, risks: detected, requiresReading,
     dispatch: { director: 'novelos-pro-director', beforeDraft, writer: 'novelos-pro-gemini', afterDraft },
     context,
   };

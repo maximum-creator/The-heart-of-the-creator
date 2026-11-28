@@ -55,12 +55,12 @@ export function buildPro(destination) {
   json(path.join(ff, 'solution.json'), { currentSolutionId: 'feelfish-custom',
     agentModels: Object.fromEntries(routing.map(([id, route]) => [id, route.model])) });
   for (const source of ['README.md', 'model-routes.json', 'scene-packet.example.json', 'chapter-handoff.example.json',
-    'runtime-observation.example.json', 'canon-candidate.example.json']) {
+    'runtime-observation.example.json', 'canon-candidate.example.json', 'quality-review.example.json']) {
     fs.copyFileSync(path.join(pro, source), path.join(target, source), fs.constants.COPYFILE_EXCL);
   }
   fs.cpSync(path.join(pro, 'templates'), path.join(target, 'templates'), { recursive: true });
   fs.copyFileSync(path.join(root, 'LICENSE'), path.join(target, 'LICENSE'), fs.constants.COPYFILE_EXCL);
-  for (const source of ['NovelOS/tools/pro/workflow.mjs', 'NovelOS/tools/pro/mcp.mjs', 'NovelOS/tools/pro/dispatch.mjs', 'NovelOS/tools/pro/canon.mjs', 'NovelOS/tools/pro/runtime-audit.mjs', 'NovelOS/tools/eval/raw-prose-delivery-audit.mjs']) {
+  for (const source of ['NovelOS/tools/pro/workflow.mjs', 'NovelOS/tools/pro/mcp.mjs', 'NovelOS/tools/pro/dispatch.mjs', 'NovelOS/tools/pro/canon.mjs', 'NovelOS/tools/pro/quality-review.mjs', 'NovelOS/tools/pro/runtime-audit.mjs', 'NovelOS/tools/eval/raw-prose-delivery-audit.mjs']) {
     const to = path.join(target, source);
     fs.mkdirSync(path.dirname(to), { recursive: true });
     fs.copyFileSync(path.join(root, source), to, fs.constants.COPYFILE_EXCL);

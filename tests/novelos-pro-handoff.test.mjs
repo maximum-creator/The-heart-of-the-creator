@@ -4,8 +4,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { test } from 'node:test';
-import { approveCanon, describeCandidate, prepareChapter, readCanon, reviewCandidate, saveDeliveryReceipt, saveRaw,
+import { approveCanon, describeCandidate, prepareChapter, readCanon, reviewCandidate, saveDeliveryReceipt, saveQualityReview, saveRaw,
   stageCandidate, verifyChapterDelivery } from '../NovelOS/tools/pro/canon.mjs';
+import { fixtureQuality, stageWithFixtureQuality } from './fixtures/pro-quality.mjs';
 
 const sample = JSON.parse(fs.readFileSync(new URL('../pro/canon-candidate.example.json', import.meta.url), 'utf8'));
 const { hardFacts, ...brief } = sample.packet;
@@ -50,13 +51,22 @@ test('prepared handoff, captured delivery and author approval bind the same chap
   assert.equal(verifyChapterDelivery(root, { ...first, finishReason: 'length' }).decision, 'BLOCK_RECEIPT_MISMATCH');
   assert.throws(() => saveDeliveryReceipt(root, { ...receiptFor(prep, 'seed'), effort: 'high' }), /different evidence/);
   stampAudit(first);
+  assert.throws(() => stageCandidate(root, first), /QUALITY_REPORT_MISSING/);
+  const firstReview = fixtureQuality(root, first);
+  assert.throws(() => saveQualityReview(root, { candidate: first, report: { ...firstReview, reading: null } }), /Independent reading/);
+  assert.throws(() => saveQualityReview(root, { candidate: first, report: { ...firstReview,
+    checks: firstReview.checks.map((row) => ({ ...row, quote: '原稿不存在的引句' })) } }), /quote is missing/);
+  firstReview.reading.decision = 'AUTHOR_REVIEW';
+  saveQualityReview(root, { candidate: first, report: firstReview });
   const staged = stageCandidate(root, first);
   const review = reviewCandidate(root, { bookId, runId: 'seed' });
   assert.equal(review.decision, 'AUTHOR_REVIEW_REQUIRED');
   assert.equal(review.proof.deliveryStatus, 'READY_FOR_READING');
   assert.equal(review.raw, raw);
   assert.equal(review.final, final);
-  assert.equal(approveCanon(root, approval(first, staged)).decision, 'CANON_APPROVED');
+  assert.equal(review.proof.quality.reading.decision, 'AUTHOR_REVIEW');
+  assert.throws(() => approveCanon(root, approval(first, staged)), /explicitly review/);
+  assert.equal(approveCanon(root, { ...approval(first, staged), authorNotesReviewed: true }).decision, 'CANON_APPROVED');
 
   const head = readCanon(root, bookId);
   const next = { ...args, chapter: 2, parentVersion: head.version, factKeys: [key] };
@@ -82,10 +92,19 @@ test('prepared handoff, captured delivery and author approval bind the same chap
 
   const second = build(deferred, 'deferred');
   stampAudit(second);
-  const pending = stageCandidate(root, second);
+  const blocked = { ...second, runId: 'blocked' };
+  stampAudit(blocked);
+  const blockedReport = fixtureQuality(root, blocked);
+  blockedReport.checks[0].decision = 'BLOCK';
+  assert.equal(saveQualityReview(root, { candidate: blocked, report: blockedReport }).decision, 'QUALITY_BLOCKED');
+  assert.throws(() => stageCandidate(root, blocked), /QUALITY_BLOCKED/);
+  const invalidSource = fixtureQuality(root, second);
+  invalidSource.inherited[0].sourceChapter = 99;
+  assert.throws(() => saveQualityReview(root, { candidate: second, report: invalidSource }), /approved source/);
+  const pending = stageWithFixtureQuality(root, second);
   const lateTruncation = build(deferred, 'late-truncation');
   stampAudit(lateTruncation);
-  const latePending = stageCandidate(root, lateTruncation);
+  const latePending = stageWithFixtureQuality(root, lateTruncation);
   saveDeliveryReceipt(root, receiptFor(deferred, 'late-truncation', 'MAX_TOKENS'));
   assert.throws(() => approveCanon(root, { ...approval(lateTruncation, latePending), manualDeliveryReviewed: true }), /Incomplete/);
   assert.throws(() => approveCanon(root, approval(second, pending)), /manual completeness/);

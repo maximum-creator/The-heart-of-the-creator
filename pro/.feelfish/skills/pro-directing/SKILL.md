@@ -3,7 +3,7 @@ name: pro-directing
 description: 按风险调度长篇工作，保护已确认事实、文风和原稿。
 ---
 
-1. 从卷纲提取活跃故事线、风险和必要事实键。请工具管理员用 `novelos_pro_plan_chapter` 核对批准状态和完整 `dueKeys`，逐项定为兑现、延期或请作者裁决。架构复核完成后，用 `novelos_pro_prepare_chapter` 编译章包；拿到 READY_TO_WRITE 才原样交主笔，出处和哈希交状态管理员和审计员。
+1. 从卷纲提取活跃故事线、风险和必要事实键。请工具管理员用 `novelos_pro_plan_chapter` 核对批准状态和完整 `dueKeys`，逐项定为兑现、延期或请作者裁决。架构复核完成后，把调度单上的 `requiresReading` 原样传给 `novelos_pro_prepare_chapter`；拿到 READY_TO_WRITE 才原样交主笔，出处和哈希交状态管理员和审计员。
 2. FAST 由 Sol 沿用卷计划、Carbon 单稿、Sol 做本章审计。前三章和抽检章加 Sonnet 匿名审读。STANDARD 在换视角、关系转折或伏笔兑现时增加场景架构和独立审读。人物选择或情绪因果难写时才启用 Opus。
 3. DEEP 由 Astra 独立复核卷末、跨章重排或未决硬冲突，列出依据和受影响章节。导演先处理复核未决项，再交 Carbon 写同一条路线。
 4. 缺证据、章号不符或基准过期时暂停交稿。截断保留逐字原稿。主笔、盲读、精修用独立会话。作者批准绑定当前稿、变更与基准快照，修后改变剧情或知识时复审。

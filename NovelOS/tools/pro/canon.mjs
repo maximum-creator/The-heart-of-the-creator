@@ -4,6 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkPacket, checkDelivery, applyEdit } from './workflow.mjs';
 import { matchesRuntimeModel } from './runtime-audit.mjs';
+import { validateQualityReview } from './quality-review.mjs';
 
 const digest = (s) => crypto.createHash('sha256').update(s, 'utf8').digest('hex');
 const json = (value) => JSON.stringify(value, null, 2) + '\n';
@@ -105,11 +106,12 @@ export function readChapterContext(root, bookId, keys = [], activeThreads = []) 
 }
 
 function compileHandoff(base, input) {
-  const { chapter, parentVersion, brief, factKeys, dueDecisions } = input;
+  const { chapter, parentVersion, brief, factKeys, dueDecisions, requiresReading } = input;
   need(base.bookId === input.bookId && chapter === base.chapter + 1 && parentVersion === base.version, 'Stale chapter handoff');
   need(brief && typeof brief === 'object' && !Array.isArray(brief)
     && !['previousTail', 'hardFacts', 'duePayoffs'].some((key) => Object.hasOwn(brief, key)), 'Handoff brief cannot supply Canon prose or the previous tail');
   need(validFactKeys(factKeys, 10) && new Set(factKeys).size === factKeys.length, 'Invalid handoff fact keys');
+  need(requiresReading === undefined || typeof requiresReading === 'boolean', 'Invalid independent reading requirement');
   const keys = [...factKeys].sort();
   need(keys.every((key) => Object.hasOwn(base.facts, key)), 'Handoff fact missing from approved baseline');
   const due = dueKeys(base);
@@ -131,7 +133,8 @@ function compileHandoff(base, input) {
     previousTail: previousTail(base) });
   need(packetResult.decision === 'PACKET_READY', 'Compiled packet failed: ' + packetResult.errors?.join(', '));
   const evidence = Object.fromEntries(keys.map((key) => [key, base.facts[key]]));
-  const handoff = { bookId: base.bookId, chapter, parentVersion, brief: normalizedBrief, factKeys: keys, dueDecisions: decisions };
+  const handoff = { bookId: base.bookId, chapter, parentVersion, brief: normalizedBrief, factKeys: keys, dueDecisions: decisions,
+    ...(requiresReading !== undefined && { requiresReading }) };
   const handoffSha256 = digest(json({ handoff, packetSha256: packetResult.packetSha256, evidence }));
   return { handoff, handoffSha256, packet: packetResult.packet, packetSha256: packetResult.packetSha256, evidence };
 }
@@ -285,13 +288,38 @@ function inspect(root, candidate, base) {
     manualDeliveryReviewRequired, facts };
 }
 
+export function saveQualityReview(root, { candidate, report }) {
+  const inspected = inspect(root, candidate, readCanon(root, candidate.bookId));
+  need(inspected.auditMatches, 'Matching continuity audit is required');
+  const quality = validateQualityReview(candidate, inspected.dependencies, report);
+  const candidateSha256 = digest(json(candidate));
+  const dir = folder(bookRoot(root, candidate.bookId), 'quality-reviews');
+  const qualitySha256 = digest(json(quality));
+  writeOnce(path.join(dir, candidateSha256 + '.json'), { candidateSha256, qualitySha256, quality });
+  return { decision: quality.hasBlocker ? 'QUALITY_BLOCKED' : 'QUALITY_REVIEW_SAVED', candidateSha256, qualitySha256 };
+}
+
+function inspectWithQuality(root, candidate, base) {
+  const inspected = inspect(root, candidate, base);
+  const candidateSha256 = digest(json(candidate));
+  const dir = folder(bookRoot(root, candidate.bookId, false), 'quality-reviews', false);
+  const file = path.join(dir, candidateSha256 + '.json');
+  if (!fs.existsSync(file)) return { ...inspected, candidateSha256, qualityStatus: 'QUALITY_REPORT_MISSING' };
+  const saved = read(file);
+  const quality = validateQualityReview(candidate, inspected.dependencies, saved.quality);
+  need(saved.candidateSha256 === candidateSha256 && saved.qualitySha256 === digest(json(quality)), 'Stored quality review version mismatch');
+  return { ...inspected, candidateSha256, quality, qualitySha256: saved.qualitySha256,
+    qualityStatus: quality.hasBlocker ? 'QUALITY_BLOCKED' : 'QUALITY_REVIEW_PRESENT' };
+}
+
 export function describeCandidate(root, candidate) {
-  const { facts, ...result } = inspect(root, candidate, readCanon(root, candidate.bookId));
-  return { ...result, candidateSha256: digest(json(candidate)) };
+  const { facts, ...result } = inspectWithQuality(root, candidate, readCanon(root, candidate.bookId));
+  return result;
 }
 export function stageCandidate(root, candidate) {
   const artifacts = describeCandidate(root, candidate);
   need(artifacts.auditMatches, 'Matching continuity audit is required');
+  need(artifacts.qualityStatus === 'QUALITY_REVIEW_PRESENT', 'Candidate quality review is missing or blocked: ' + artifacts.qualityStatus);
   saveRaw(root, candidate);
   const dir = folder(bookRoot(root, candidate.bookId), 'runs');
   writeOnce(path.join(dir, candidate.runId + '.json'), candidate);
@@ -304,13 +332,14 @@ export function reviewCandidate(root, { bookId, runId }) {
   need(candidate.bookId === bookId && candidate.runId === runId, 'Saved candidate identity mismatch');
   const proof = describeCandidate(root, candidate);
   const { chapter, parentVersion, raw, final, edit, changes, audit } = candidate;
-  return { decision: proof.auditMatches ? 'AUTHOR_REVIEW_REQUIRED' : 'AUDIT_REFRESH_REQUIRED',
+  return { decision: !proof.auditMatches ? 'AUDIT_REFRESH_REQUIRED'
+    : proof.qualityStatus === 'QUALITY_REVIEW_PRESENT' ? 'AUTHOR_REVIEW_REQUIRED' : proof.qualityStatus,
     bookId, runId, chapter, parentVersion, proof, raw, final,
     edit: edit ? { before: edit.order.quote, after: edit.replacement, reason: edit.order.reason } : null,
     changes, auditReference: audit?.evidenceRef };
 }
 
-export function approveCanon(root, { bookId, runId, candidateSha256, authorRef, manualDeliveryReviewed = false }) {
+export function approveCanon(root, { bookId, runId, candidateSha256, authorRef, manualDeliveryReviewed = false, authorNotesReviewed = false }) {
   need(typeof runId === 'string' && id.test(runId) && hex.test(candidateSha256 ?? ''), 'Invalid approval target');
   need(typeof authorRef === 'string' && !!authorRef.trim(), 'Explicit author approval reference is required');
   const book = bookRoot(root, bookId);
@@ -327,16 +356,18 @@ export function approveCanon(root, { bookId, runId, candidateSha256, authorRef, 
   if (fs.existsSync(file)) return existing();
   const base = readCanon(root, bookId);
   if (base.chapter >= candidate.chapter) return existing();
-  const checked = inspect(root, candidate, base);
+  const checked = inspectWithQuality(root, candidate, base);
   need(checked.auditMatches, 'Matching continuity audit is required');
+  need(checked.qualityStatus === 'QUALITY_REVIEW_PRESENT', 'Candidate quality review is missing or blocked: ' + checked.qualityStatus);
+  need(!checked.quality.authorNotes.length || authorNotesReviewed === true, 'Author must explicitly review the open quality notes');
   need(!checked.manualDeliveryReviewRequired || manualDeliveryReviewed === true, 'Author must confirm manual completeness review');
   const body = { bookId, chapter: candidate.chapter, parentVersion: base.version,
     runId, packetSha256: checked.packetSha256, rawSha256: checked.rawSha256, finalSha256: checked.finalSha256,
-    changesSha256: checked.changesSha256, candidateSha256, audit: candidate.audit,
+    changesSha256: checked.changesSha256, candidateSha256, audit: candidate.audit, qualitySha256: checked.qualitySha256,
     ...(checked.dependencies && { dependencies: checked.dependencies, evidenceSha256: checked.evidenceSha256 }),
     ...(checked.handoffSha256 && { handoffSha256: checked.handoffSha256, receiptSha256: checked.receiptSha256,
       dueDecisions: checked.dueDecisions, deliveryStatus: checked.deliveryStatus }),
-    approval: { authorRef, manualDeliveryReviewed, approvedAt: new Date().toISOString() },
+    approval: { authorRef, manualDeliveryReviewed, authorNotesReviewed, approvedAt: new Date().toISOString() },
     final: candidate.final, facts: checked.facts };
   const version = digest(json(body));
   try { append(file, { ...body, version }); }
@@ -414,17 +445,18 @@ export function reviewChapterImpact(root, { bookId, sourceChapter, sourceFinalSh
 
 if (process.argv[1] && pathToFileURL(fs.realpathSync(process.argv[1])).href === import.meta.url) {
   const [action, root, arg, runId, candidateSha256, authorRef, ...flags] = process.argv.slice(2);
-  if (!root || !arg) throw new Error('Usage: node canon.mjs raw|inspect|stage|prepare|receipt|impact <existing-vault> <input.json> | read <vault> <book-id> | review <vault> <book-id> <run-id> | context <vault> <book-id> [fact-keys...] | approve <vault> <book-id> <run-id> <candidate-sha256> <author-ref> [--manual-delivery-reviewed]');
+  if (!root || !arg) throw new Error('Usage: node canon.mjs raw|inspect|stage|prepare|receipt|impact <existing-vault> <input.json> | audit <vault> <candidate.json> <quality-report.json> | read <vault> <book-id> | review <vault> <book-id> <run-id> | context <vault> <book-id> [fact-keys...] | approve <vault> <book-id> <run-id> <candidate-sha256> <author-ref> [--manual-delivery-reviewed] [--author-notes-reviewed]');
   const result = action === 'raw' ? saveRaw(root, read(arg))
     : action === 'prepare' ? prepareChapter(root, read(arg))
     : action === 'receipt' ? saveDeliveryReceipt(root, read(arg))
+    : action === 'audit' ? saveQualityReview(root, { candidate: read(arg), report: read(runId) })
     : action === 'impact' ? reviewChapterImpact(root, read(arg))
     : action === 'review' ? reviewCandidate(root, { bookId: arg, runId })
     : action === 'inspect' ? describeCandidate(root, read(arg))
     : action === 'stage' ? stageCandidate(root, read(arg)) : action === 'read' ? readCanon(root, arg)
       : action === 'context' ? readChapterContext(root, arg, process.argv.slice(5))
     : action === 'approve' ? approveCanon(root, { bookId: arg, runId, candidateSha256, authorRef,
-        manualDeliveryReviewed: flags.includes('--manual-delivery-reviewed') }) : null;
+        manualDeliveryReviewed: flags.includes('--manual-delivery-reviewed'), authorNotesReviewed: flags.includes('--author-notes-reviewed') }) : null;
   if (!result) throw new Error('Unknown Canon command');
   console.log(json(result).trimEnd());
 }

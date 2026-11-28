@@ -3,8 +3,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { approveCanon, describeCandidate, readCanon, reviewChapterImpact, stageCandidate } from '../NovelOS/tools/pro/canon.mjs';
+import { approveCanon, describeCandidate, readCanon, reviewChapterImpact, saveQualityReview, stageCandidate } from '../NovelOS/tools/pro/canon.mjs';
 import { planChapter } from '../NovelOS/tools/pro/dispatch.mjs';
+import { fixtureQuality, stageWithFixtureQuality } from './fixtures/pro-quality.mjs';
 
 const packet = JSON.parse(fs.readFileSync(new URL('../pro/scene-packet.example.json', import.meta.url), 'utf8'));
 const bookId = 'volume-fixture';
@@ -35,6 +36,9 @@ test('an offline 24-chapter volume preserves the seed, detects payoff, tracks re
   }
 
   function approve(candidate) {
+    const report = fixtureQuality(vault, candidate);
+    if (candidate.chapter === 4) report.reading = null;
+    saveQualityReview(vault, { candidate, report });
     const staged = stageCandidate(vault, candidate);
     const result = approveCanon(vault, { bookId, runId: candidate.runId, candidateSha256: staged.candidateSha256,
       authorRef: 'offline fixture only', manualDeliveryReviewed: true });
@@ -78,7 +82,7 @@ test('an offline 24-chapter volume preserves the seed, detects payoff, tracks re
   assert.equal(next.context.facts[key].threadOrigin.quote, seed);
   assert.equal(next.context.facts[key].quote, payoff);
   assert.equal(next.context.previousTail, head.final);
-  const stagedNext = stageCandidate(vault, prepare(25, '她推开铺门。', [], [key]));
+  const stagedNext = stageWithFixtureQuality(vault, prepare(25, '她推开铺门。', [], [key]));
 
   const proposedFinal = initial.final.replace('月底', '下月');
   const proposed = { bookId, sourceChapter: 1, sourceFinalSha256: seedHash, headVersion: head.version,

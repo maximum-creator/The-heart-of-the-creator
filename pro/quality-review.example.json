@@ -1,0 +1,19 @@
+{
+  "reviewer": "offline-continuity-example",
+  "checks": [
+    { "aspect": "continuity", "decision": "PASS", "quote": "宋枝把钥匙搁在鞋盒上", "note": "示例核对钥匙最后的位置。" },
+    { "aspect": "viewpoint", "decision": "PASS", "quote": "伙计看见了", "note": "示例只记录在场人观察到的情形。" },
+    { "aspect": "causality", "decision": "PASS", "quote": "宋枝把钥匙搁在鞋盒上", "note": "示例将伙计得知位置与摆放动作相连。" }
+  ],
+  "inherited": [],
+  "stateChanges": [
+    { "key": "knowledge:伙计.钥匙位置", "decision": "PASS", "quote": "宋枝把钥匙搁在鞋盒上", "note": "动作和随后的目击支持这条转移。" }
+  ],
+  "reading": {
+    "reviewer": "offline-reader-example",
+    "decision": "PASS",
+    "quote": "宋枝把钥匙搁在鞋盒上",
+    "note": "动作让读者能跟上注意力转移。",
+    "keep": { "quote": "伙计看见了", "note": "保留目击证据，便于续章判断知情范围。" }
+  }
+}

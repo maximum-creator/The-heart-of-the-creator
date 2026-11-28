@@ -10,6 +10,7 @@ import { checkDelivery, lockIssue } from '../NovelOS/tools/pro/workflow.mjs';
 import { auditRuntime } from '../NovelOS/tools/pro/runtime-audit.mjs';
 import { planChapter } from '../NovelOS/tools/pro/dispatch.mjs';
 import { readCanon, readChapterContext, describeCandidate, saveRaw, stageCandidate, approveCanon } from '../NovelOS/tools/pro/canon.mjs';
+import { stageWithFixtureQuality } from './fixtures/pro-quality.mjs';
 
 const file = (rel) => fileURLToPath(new URL(rel, import.meta.url));
 const packet = JSON.parse(fs.readFileSync(file('../pro/scene-packet.example.json'), 'utf8'));
@@ -62,7 +63,7 @@ test('truncated raw stays recoverable; a new chapter sees only the approved matc
   const c = input('r1');
   assert.equal(saveRaw(root, { ...c, runId: 'stopped', finishReason: 'length' }).delivery, 'INCOMPLETE_RAW');
   assert.throws(() => stageCandidate(root, { ...c, runId: 'stopped', finishReason: 'length' }), /Incomplete/);
-  const { candidateSha256 } = stageCandidate(root, c);
+  const { candidateSha256 } = stageWithFixtureQuality(root, c);
   assert.equal(readCanon(root, c.bookId).chapter, 0);
   const approval = { bookId: c.bookId, runId: c.runId, candidateSha256, authorRef: 'author accepted this hash', manualDeliveryReviewed: true };
   assert.throws(() => approveCanon(root, { ...approval, candidateSha256: 'f'.repeat(64) }), /does not match/);
@@ -98,7 +99,7 @@ test('truncated raw stays recoverable; a new chapter sees only the approved matc
   next.audit.changesSha256 = digest(json(next.changes));
   assert.throws(() => describeCandidate(root, { ...next, packet: { ...packet, previousTail: '错误的前章尾段' } }), /approved baseline/);
   next.packet = { ...packet, previousTail: replan.context.previousTail };
-  const stagedNext = stageCandidate(root, next);
+  const stagedNext = stageWithFixtureQuality(root, next);
   assert.equal(readCanon(root, c.bookId).chapter, 1);
   assert.equal(approveCanon(root, { ...approval, runId: 'r2', candidateSha256: stagedNext.candidateSha256 }).chapter, 2);
   assert.throws(() => stageCandidate(root, { ...input('stale', 2, 'GENESIS'), changes: [] }), /Stale/);
@@ -113,7 +114,7 @@ test('unaudited semantic edits, changed state evidence and missing upstream rece
   assert.throws(() => stageCandidate(root, { ...c, edit: { order, replacement }, final: c.final.replace(quote, replacement) }), /Matching continuity audit/);
   assert.throws(() => stageCandidate(root, { ...c, changes: [{ ...c.changes[0], quote: '编造的证据' }] }), /quote is missing/);
   const manual = { ...c, finishEvidence: undefined };
-  const staged = stageCandidate(root, manual);
+  const staged = stageWithFixtureQuality(root, manual);
   const approval = { bookId: c.bookId, runId: c.runId, candidateSha256: staged.candidateSha256, authorRef: 'manual inspection' };
   assert.throws(() => approveCanon(root, approval), /manual completeness/);
   assert.equal(approveCanon(root, { ...approval, manualDeliveryReviewed: true }).decision, 'CANON_APPROVED');
@@ -132,7 +133,7 @@ test('a local patch cannot publish a chapter whose entire body was removed', (t)
 test('concurrent approvals commit one complete snapshot', async (t) => {
   const root = vault(t);
   const first = input('a'), second = input('b');
-  const records = [first, second].map((x) => [x.runId, stageCandidate(root, x).candidateSha256]);
+  const records = [first, second].map((x) => [x.runId, stageWithFixtureQuality(root, x).candidateSha256]);
   const tryApprove = ([runId, sha]) => new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [file('../NovelOS/tools/pro/canon.mjs'), 'approve', root, first.bookId, runId, sha, 'author-ref',
       '--manual-delivery-reviewed'], { stdio: 'ignore' });

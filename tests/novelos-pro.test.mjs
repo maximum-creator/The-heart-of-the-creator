@@ -103,7 +103,7 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   });
   assert.equal(run.status, 0, run.stderr);
   const [init, list, resp, bad, routed, impact, prepared] = run.stdout.trim().split('\n').map(JSON.parse);
-  assert.equal(init.result.serverInfo.version, '1.5.0');
+  assert.equal(init.result.serverInfo.version, '1.6.0');
   assert.equal(list.result.tools.length, 7);
   assert.ok(list.result.tools.some((tool) => tool.name === 'novelos_pro_review_impact'));
   assert.equal(JSON.parse(resp.result.content[0].text).decision, 'PACKET_READY');
@@ -115,4 +115,16 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   assert.equal(JSON.parse(impact.result.content[0].text).decision, 'STALE_BASELINE');
   assert.equal(JSON.parse(prepared.result.content[0].text).decision, 'READY_TO_WRITE');
   assert.deepEqual(fs.readdirSync(vault), []);
+
+  const canon = path.join(root, 'NovelOS/tools/pro/canon.mjs');
+  const candidate = path.join(root, 'canon-candidate.example.json');
+  const quality = path.join(root, 'quality-review.example.json');
+  const cli = (...args) => spawnSync(process.execPath, [canon, ...args], { encoding: 'utf8' });
+  assert.match(cli('stage', vault, candidate).stderr, /QUALITY_REPORT_MISSING/);
+  assert.equal(JSON.parse(cli('audit', vault, candidate, quality).stdout).decision, 'QUALITY_REVIEW_SAVED');
+  assert.equal(JSON.parse(cli('stage', vault, candidate).stdout).decision, 'CANDIDATE_STAGED');
+  const review = JSON.parse(cli('review', vault, 'example-book', 'chapter-01-a').stdout);
+  assert.equal(review.decision, 'AUTHOR_REVIEW_REQUIRED');
+  assert.equal(review.proof.quality.stateChanges[0].key, 'knowledge:伙计.钥匙位置');
+  assert.equal(review.proof.quality.stateChanges[0].line, 3);
 });
