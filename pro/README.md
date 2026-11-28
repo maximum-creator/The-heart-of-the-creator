@@ -1,18 +1,33 @@
-# NovelOS Pro 1.11.1 · 长篇连载与剧本方案
+# NovelOS Pro 1.12.0 · 长篇连载与剧本方案
 
 独立于 NovelOS 标准版的 FeelFish 方案。全部模型走 FeelFish 积分。Carbon 一章一稿，Sonnet 做常规审读和局修，Opus 按需辅助，Sol 负责导演与连续性审计，Astra 只复核卷级冲突。作者本地批准正式设定。
 
 ## 导入 FeelFish
 
-1. 从仓库根目录运行 `node scripts/build-novelos-pro.mjs <新目录>`，导入生成的 `feelfish.json`。选择自定义方案，确认总导演和十个岗位。
+1. 从仓库根目录运行 `node scripts/build-novelos-pro.mjs <新目录>`，导入生成的 `feelfish.json`。选择自定义方案，确认总导演和九个岗位。
 2. 在模型菜单核对 Carbon、Argon、Opus 5.5、Sonnet 4.6、Sol 和 Astra。若模型菜单缺 Sonnet，在 FeelFish 的「设置 → 模型配置 → 添加可用模型」选内置 `feelfish` 接口，再从目录添加 `feelfish/claude-sonnet-4-6`。全部岗位共用 FeelFish Cloud，无需第三方接口或密钥。
-3. 用包内 `mcp-config.template.json` 添加本地 stdio 服务，使用 Node.js 22，填项目绝对路径和已有的私有 Canon vault 路径。服务进程通过 `NOVELOS_PRO_VAULT` 读取批准快照。十一个 Pro 工具只给工具管理员。从市场应用方案后，同样需要单独配置本地 MCP。
+3. 确定性检查在本机运行。Node.js 22 可直接调用包内的 11 个 Pro 工具；支持工具直调的宿主也可按 `mcp-config.template.json` 接入同一个 stdio 服务。用 `NOVELOS_PRO_VAULT` 指向项目外已有的私有 Canon 目录。
 
-FeelFish 导入文件给出目标模型和默认思考档。安装后需用脱敏回执核对实际模型、档位和输出预算。用 FeelFish 的执行过程核对子智能体调用与 MCP 回执。客户端只显示开关时，保留思考档待核验。
+FeelFish 导入文件给出目标模型和默认思考档。安装后需用脱敏回执核对实际模型、档位和输出预算。用 FeelFish 的执行过程核对子智能体调用；本机 MCP 回执单独保存在私有工作区。客户端只显示开关时，保留思考档待核验。
 
 官方文档见 [FeelFish 自定义方案](https://www.feelfish.com/zh/docs/custom-agent-solution)、[自定义模型](https://www.feelfish.com/zh/docs/custom-model)、[Gemini 4 Carbon](https://aistudio.google.com/docs/models/gemini-4-carbon) 和 [OpenAI API 更新记录](https://developers.openai.com/api/docs/changelog)。
 
-## 十个岗位
+## 本机直接检查
+
+在生成的包根目录运行命令。把 `NOVELOS_PRO_VAULT` 指向已有私有 Canon 目录，本地演练可使用一个空目录。
+
+```powershell
+$env:NOVELOS_PRO_VAULT = 'D:/NovelOS/private-canon'
+node NovelOS/tools/pro/mcp.mjs list
+node NovelOS/tools/pro/mcp.mjs call novelos_pro_plan_chapter chapter-plan.example.json
+node NovelOS/tools/pro/mcp.mjs call novelos_pro_prepare_chapter chapter-handoff.example.json
+```
+
+`call` 接收参数 JSON 文件，也可用 `-` 从标准输入读取 JSON 对象，标准输出是工具原始 JSON 结果。供自动化使用时，进程退出码表示工具是否成功执行，后续流转还要看 `decision`，例如 `STALE_BASELINE` 或 `MISSING_EVIDENCE` 都要停。
+
+取证、章包编译、交稿检查、锁段和差异只执行本机工具，按需把结果交给对应岗位。人物选择、独立审读、判断修订是否改变剧情等仍由人或模型处理。仅使用 FeelFish 对话时，缺工具结果会提示 `DIRECT_CHECK_REQUIRED`。先由本机运行对应命令，再把当次结果交回当前流程。实际回执和待查材料留在本机私有目录。
+
+## 九个岗位
 
 | 岗位 | 模型 | 默认思考目标 | 建议输出预算 |
 |---|---|---|---:|
@@ -25,7 +40,6 @@ FeelFish 导入文件给出目标模型和默认思考档。安装后需用脱�
 | 连续性审计 | GPT-6.2 Sol | Medium，卷级硬冲突用 High | 4,096 |
 | 卷级复核 | GPT-6.2 Astra | High | 6,144 |
 | 书稿与状态管理员 | Gemini 4 Argon | Low | 3,072 |
-| 工具管理员 | MCP 执行，Gemini 4 Argon 转交异常 | Low | 2,048 |
 
 默认省略温度和其他采样参数。预算与思考档是运行目标，不同模式以路由表和实际上游回执为准。
 
@@ -39,7 +53,7 @@ FeelFish 导入文件给出目标模型和默认思考档。安装后需用脱�
 
 FeelFish 通用控件不能证明某个模型支持调温或上游收到了指定思考档。方案导入文件统一省略温度。生成配置中的思考档是目标，不能取得真实回执时保持待核验。
 
-10 个技能都在岗位上有明确调用点。总导演使用调度和卷规划，Astra 使用卷规划和连续性，其余岗位各一项。Carbon、Opus、Sonnet 读者和编辑，以及工具管理员无需文件读取权限，其唯一技能由打包脚本内嵌。正文主笔直接使用内嵌技能；为这些无文件读取权限的岗位使用 `/` 插入动态技能时，宿主可能拦截读文件。长程规则参考 [FeelFish 技能指南](https://www.feelfish.com/zh/docs/build-skills-for-novel)，会话深度参考 [Google 思考档位](https://aistudio.google.com/docs/thinking)、[Anthropic Opus](https://platform.claude.com/docs/en/models/opus-5-5/migration-guide)、[Anthropic Sonnet](https://platform.claude.com/docs/en/models/sonnet-4-6/overview) 和 [OpenAI GPT-6.2](https://developers.openai.com/api/docs/guides/latest-model)。
+9 个技能都在岗位上有明确调用点。总导演使用调度和卷规划，Astra 使用卷规划和连续性，其余岗位各一项。Carbon、Opus、Sonnet 读者和编辑无需文件读取权限，其唯一技能由打包脚本内嵌。正文主笔直接使用内嵌技能；为这些无文件读取权限的岗位使用 `/` 插入动态技能时，宿主可能拦截读文件。长程规则参考 [FeelFish 技能指南](https://www.feelfish.com/zh/docs/build-skills-for-novel)，会话深度参考 [Google 思考档位](https://aistudio.google.com/docs/thinking)、[Anthropic Opus](https://platform.claude.com/docs/en/models/opus-5-5/migration-guide)、[Anthropic Sonnet](https://platform.claude.com/docs/en/models/sonnet-4-6/overview) 和 [OpenAI GPT-6.2](https://developers.openai.com/api/docs/guides/latest-model)。
 
 ## 从卷纲到下一章
 
@@ -53,7 +67,7 @@ FeelFish 通用控件不能证明某个模型支持调温或上游收到了指�
 - STANDARD 在关系转折、换视角、时间跳跃或伏笔兑现时加场景架构和独立盲读。只有创作难点而无场景结构风险时，Opus 出备选，跳过架构。
 - DEEP 在卷末、跨章重排或 Sol 无法解决的跨章硬冲突时交 Astra 独立复核。导演处理未决问题再交主笔。普通盲读和点段返工由 Sonnet 完成。
 
-MCP 只读取授权 vault 里最新批准的快照，按事实键返回值、来源章节、原文引句和稿件哈希。缺事实或基准版本漂移时停止写手交接。跨章风险由导演从卷纲中提取，调度工具负责按规则分流。已有同一基准的只读 MCP 回执可直接复用，需要宿主代调时才请 Argon 转交。实际分派及积分结算由 FeelFish 执行。
+MCP 只读取授权 vault 里最新批准的快照，按事实键返回值、来源章节、原文引句和稿件哈希。缺事实或基准版本漂移时停止写手交接。跨章风险由导演从卷纲中提取，调度工具负责按规则分流。同一基准、同一输入的工具结果可直接复用。涉及模型判断的实际分派及积分结算由 FeelFish 执行。
 
 已批准的承诺和伏笔可登记故事线与预计兑现章。工具提示活跃线和到期事项，到期触发关键章路径。修改已批准旧章前，先预览需重审的直接依赖、未登记依赖和后续基准。影响预览保留已批准记录，实际改稿和重新审批由作者决定。
 

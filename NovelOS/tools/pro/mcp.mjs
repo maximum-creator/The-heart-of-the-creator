@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import readline from 'node:readline';
 import { checkPacket, lockIssue, applyEdit } from './workflow.mjs';
 import { chapterPlanSchema, planChapter } from './dispatch.mjs';
@@ -44,30 +45,63 @@ const tools = [
     bookId: str, runId: str, candidateSha256: str,
   }, ['bookId', 'runId']), (args) => readReworkHistory(process.env.NOVELOS_PRO_VAULT, args)],
 ];
-const send = (message) => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', ...message }) + '\n');
-const loop = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
-for await (const line of loop) {
-  let request;
-  try { request = JSON.parse(line); }
-  catch { send({ id: null, error: { code: -32700, message: 'Invalid JSON' } }); continue; }
-  if (!request || typeof request !== 'object' || Array.isArray(request) || request.jsonrpc !== '2.0'
-    || typeof request.method !== 'string' || (Object.hasOwn(request, 'id') && !['string', 'number'].includes(typeof request.id))) {
-    send({ id: null, error: { code: -32600, message: 'Invalid JSON-RPC request' } });
-    continue;
+const listTools = () => tools.map(([name, description, inputSchema]) => ({ name, description, inputSchema }));
+const findTool = (name) => tools.find(([toolName]) => toolName === name);
+const print = (value) => process.stdout.write(JSON.stringify(value) + '\n');
+const send = (message) => print({ jsonrpc: '2.0', ...message });
+
+function runLocal(args) {
+  const [command, name, input] = args;
+  if (command === 'list' && args.length === 1) return print({ tools: listTools() });
+  if (command !== 'call' || args.length !== 3) {
+    throw new Error('Usage: node mcp.mjs list | call <tool-name> <input.json|->');
   }
-  if (request.id === undefined) continue;
-  const { id, method, params } = request;
-  if (method === 'initialize') {
-    send({ id, result: { protocolVersion: ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'].includes(params?.protocolVersion) ? params.protocolVersion : '2024-11-05',
-      serverInfo: { name: 'novelos-pro', version: '1.11.1' }, capabilities: { tools: {} } } });
-  } else if (method === 'ping') send({ id, result: {} });
-  else if (method === 'tools/list') send({ id, result: { tools: tools.map(([name, description, inputSchema]) => ({ name, description, inputSchema })) } });
-  else if (method === 'tools/call') {
-    const action = tools.find(([name]) => name === params?.name);
-    if (!action) { send({ id, error: { code: -32602, message: 'Unknown NovelOS Pro tool' } }); continue; }
-    try {
-      const result = action[3](params?.arguments ?? {});
-      send({ id, result: { isError: false, content: [{ type: 'text', text: JSON.stringify(result) }] } });
-    } catch (error) { send({ id, result: { isError: true, content: [{ type: 'text', text: error.message }] } }); }
-  } else send({ id, error: { code: -32601, message: 'Unknown method' } });
+  const action = findTool(name);
+  if (!action) throw new Error('Unknown NovelOS Pro tool: ' + name);
+  const source = fs.readFileSync(input === '-' ? 0 : input, 'utf8');
+  const parameters = JSON.parse(source.replace(/^\uFEFF/u, ''));
+  if (!parameters || typeof parameters !== 'object' || Array.isArray(parameters)) {
+    throw new Error('Expected a JSON object containing the tool arguments');
+  }
+  print(action[3](parameters));
+}
+
+async function serve() {
+  const loop = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+  for await (const line of loop) {
+    let request;
+    try { request = JSON.parse(line); }
+    catch { send({ id: null, error: { code: -32700, message: 'Invalid JSON' } }); continue; }
+    if (!request || typeof request !== 'object' || Array.isArray(request) || request.jsonrpc !== '2.0'
+      || typeof request.method !== 'string' || (Object.hasOwn(request, 'id') && !['string', 'number'].includes(typeof request.id))) {
+      send({ id: null, error: { code: -32600, message: 'Invalid JSON-RPC request' } });
+      continue;
+    }
+    if (request.id === undefined) continue;
+    const { id, method, params } = request;
+    if (method === 'initialize') {
+      send({ id, result: { protocolVersion: ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'].includes(params?.protocolVersion) ? params.protocolVersion : '2024-11-05',
+        serverInfo: { name: 'novelos-pro', version: '1.12.0' }, capabilities: { tools: {} } } });
+    } else if (method === 'ping') send({ id, result: {} });
+    else if (method === 'tools/list') send({ id, result: { tools: listTools() } });
+    else if (method === 'tools/call') {
+      const action = findTool(params?.name);
+      if (!action) { send({ id, error: { code: -32602, message: 'Unknown NovelOS Pro tool' } }); continue; }
+      try {
+        const result = action[3](params?.arguments ?? {});
+        send({ id, result: { isError: false, content: [{ type: 'text', text: JSON.stringify(result) }] } });
+      } catch (error) { send({ id, result: { isError: true, content: [{ type: 'text', text: error.message }] } }); }
+    } else send({ id, error: { code: -32601, message: 'Unknown method' } });
+  }
+}
+
+if (process.argv.length === 2) {
+  await serve();
+} else {
+  try {
+    runLocal(process.argv.slice(2));
+  } catch (error) {
+    process.stderr.write(error.message + '\n');
+    process.exitCode = 1;
+  }
 }

@@ -31,6 +31,7 @@ test('four formats share the story identity while dispatch and production limits
     identities.add(result.storyPlanSha256);
     plans.add(result.workPlanSha256);
     assert.equal(result.order.dispatch.writer, 'novelos-pro-gemini');
+    assert.equal(result.order.dispatch.tools, 'LOCAL_MCP');
     assert.equal(result.order.dispatch.approval, 'AUTHOR');
     assert.equal(result.order.dispatch.afterDraft.includes('novelos-pro-reader'), format !== 'NOVEL');
     assert.equal(evaluateWorkReadiness({ ...input, artifact, review: checkedReview(input, result) }).decision, 'OFFLINE_ONLY');

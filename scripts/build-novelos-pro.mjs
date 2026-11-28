@@ -23,8 +23,8 @@ export function loadProBindings(source, roles) {
     const selected = list('skills');
     if (!tools || !selected?.length || selected.length > 2 || new Set(selected).size !== selected.length
       || tools.includes('all') || selected.some((skill) => !available.has(skill))) throw new Error('Invalid Pro bindings: ' + id);
-    if (id !== 'novelos-pro-operator' && tools.some((tool) => tool.startsWith('novelos_pro_'))) {
-      throw new Error('Pro MCP is restricted to the tool operator: ' + id);
+    if (tools.some((tool) => tool.startsWith('novelos_pro_'))) {
+      throw new Error('Pro runs deterministic MCP tools outside model roles: ' + id);
     }
     if (!tools.includes('read_file_content') && selected.length !== 1) throw new Error('Inline exactly one Pro skill: ' + id);
     const definitions = selected.map((skill) => {
@@ -44,7 +44,7 @@ export function loadProBindings(source, roles) {
 }
 
 export function validateProRoutes(roles) {
-  const ids = ['director', 'dramaturg', 'opus', 'gemini', 'reader', 'editor', 'operator', 'continuity', 'curator', 'arbiter'];
+  const ids = ['director', 'dramaturg', 'opus', 'gemini', 'reader', 'editor', 'continuity', 'curator', 'arbiter'];
   if (Object.keys(roles).length !== ids.length || ids.some((id) => !Object.hasOwn(roles, 'novelos-pro-' + id))) {
     throw new Error('Unexpected role set');
   }
@@ -89,7 +89,7 @@ export function buildPro(destination) {
   json(path.join(ff, 'solutions', 'feelfish-custom.json'), solution);
   json(path.join(ff, 'solution.json'), { currentSolutionId: 'feelfish-custom',
     agentModels: Object.fromEntries(routing.map(([id, route]) => [id, route.model])) });
-  for (const source of ['README.md', 'model-routes.json', 'scene-packet.example.json', 'chapter-handoff.example.json',
+  for (const source of ['README.md', 'model-routes.json', 'scene-packet.example.json', 'chapter-plan.example.json', 'chapter-handoff.example.json',
     'runtime-observation.example.json', 'canon-candidate.example.json', 'quality-review.example.json', 'MARKETPLACE.md']) {
     fs.copyFileSync(path.join(pro, source), path.join(target, source), fs.constants.COPYFILE_EXCL);
   }

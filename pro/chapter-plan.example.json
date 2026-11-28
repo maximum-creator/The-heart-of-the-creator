@@ -1,0 +1,7 @@
+{
+  "bookId": "example-book",
+  "chapter": 1,
+  "parentVersion": "GENESIS",
+  "requiredFactKeys": [],
+  "risks": []
+}

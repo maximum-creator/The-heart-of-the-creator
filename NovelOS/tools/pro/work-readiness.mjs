@@ -85,7 +85,7 @@ function schedule(risks) {
   const needsSceneDesign = deep || risks.includes('payoff') || risks.includes('scene_design');
   const needsCreativeSupport = risks.includes('creative_difficulty');
   return {
-    director: 'novelos-pro-director', tools: 'novelos-pro-operator', writer: 'novelos-pro-gemini',
+    director: 'novelos-pro-director', tools: 'LOCAL_MCP', writer: 'novelos-pro-gemini',
     beforeDraft: [
       ...(deep ? ['novelos-pro-arbiter'] : []),
       ...(needsCreativeSupport ? ['novelos-pro-opus'] : []),

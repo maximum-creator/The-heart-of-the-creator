@@ -49,15 +49,15 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
   const manifest = JSON.parse(read('model-routes.json'));
   const bindings = loadProBindings(path.join(root, '.feelfish'), manifest.roles);
-  assert.equal(new Set([...bindings.values()].flatMap(({ skills }) => skills)).size, 10);
+  assert.equal(new Set([...bindings.values()].flatMap(({ skills }) => skills)).size, 9);
   assert.deepEqual(bindings.get('novelos-pro-director').skills, ['pro-directing', 'pro-series-planning']);
   assert.deepEqual(bindings.get('novelos-pro-dramaturg').skills, ['pro-scene']);
-  assert.match(read('.feelfish/agents/novelos-pro-operator.md'), /实际捕获回执由本地操作者登记/);
-  assert.match(read('MARKETPLACE.md'), /单独配置本地 Pro MCP/);
+  assert.equal(bindings.has('novelos-pro-operator'), false);
+  assert.match(read('MARKETPLACE.md'), /本机命令直接运行/);
   const active = JSON.parse(read('.feelfish/solution.json'));
   const solution = JSON.parse(read('.feelfish/solutions/feelfish-custom.json'));
   assert.equal(solution.primaryAgentId, 'novelos-pro-director');
-  assert.equal(solution.agents.length, 10);
+  assert.equal(solution.agents.length, 9);
   assert.deepEqual(active.agentModels['novelos-pro-opus'], manifest.roles['novelos-pro-opus'].model);
   for (const [role, expected] of Object.entries({
     director: 'feelfish/gpt-6.2-sol',
@@ -68,7 +68,6 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
     dramaturg: 'feelfish/claude-sonnet-4-6',
     reader: 'feelfish/claude-sonnet-4-6',
     editor: 'feelfish/claude-sonnet-4-6',
-    operator: 'feelfish/gemini-4-argon',
     curator: 'feelfish/gemini-4-argon',
   })) {
     const id = 'novelos-pro-' + role;
@@ -86,12 +85,12 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   const carbon = read('.feelfish/agents/novelos-pro-gemini.md');
   assert.match(carbon, /^tools: \[\]$/m);
   assert.match(carbon, /从一件已经开始/);
-  assert.match(read('.feelfish/agents/novelos-pro-operator.md'), /novelos_pro_plan_chapter/);
+  assert.match(read('.feelfish/agents/novelos-pro-director.md'), /DIRECT_CHECK_REQUIRED/);
   const mutated = structuredClone(manifest.roles);
   mutated['novelos-pro-opus'].model.temperature = 0.8;
   assert.throws(() => validateProRoutes(mutated), /sampling defaults/);
   delete mutated['novelos-pro-opus'].model.temperature;
-  mutated['novelos-pro-operator'].model.modelName = 'feelfish/gemini-3.8-flash';
+  mutated['novelos-pro-curator'].model.modelName = 'feelfish/gemini-3.8-flash';
   assert.throws(() => validateProRoutes(mutated), /Gemini 4/);
   const rpc = [
     { id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } },
@@ -122,10 +121,9 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   assert.equal(run.status, 0, run.stderr);
   const [invalid, init, list, resp, bad, routed, impact, prepared, work, positioning] = run.stdout.trim().split('\n').map(JSON.parse);
   assert.equal(invalid.error.code, -32600);
-  assert.equal(init.result.serverInfo.version, '1.11.1');
+  assert.equal(init.result.serverInfo.version, '1.12.0');
   assert.equal(list.result.tools.length, 11);
-  assert.deepEqual(bindings.get('novelos-pro-operator').tools,
-    list.result.tools.map((tool) => tool.name));
+  assert.ok([...bindings.values()].every(({ tools }) => tools.every((tool) => !tool.startsWith('novelos_pro_'))));
   assert.ok(list.result.tools.some((tool) => tool.name === 'novelos_pro_review_impact'));
   assert.equal(JSON.parse(resp.result.content[0].text).decision, 'PACKET_READY');
   assert.equal(bad.result.isError, true);
@@ -137,6 +135,27 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   assert.equal(JSON.parse(prepared.result.content[0].text).decision, 'READY_TO_WRITE');
   assert.equal(JSON.parse(work.result.content[0].text).decision, 'RETURN_TO_DEVELOPMENT');
   assert.equal(JSON.parse(positioning.result.content[0].text).decision, 'POSITIONING_REVIEW');
+  const local = (args, input, env = { ...process.env, NOVELOS_PRO_VAULT: vault }) => spawnSync(
+    process.execPath, [path.join(root, 'NovelOS/tools/pro/mcp.mjs'), ...args], { input, env, encoding: 'utf8' },
+  );
+  const listed = local(['list']);
+  assert.equal(listed.status, 0, listed.stderr);
+  assert.deepEqual(JSON.parse(listed.stdout), list.result);
+  const call = (name, input) => local(['call', name, '-'], JSON.stringify(input));
+  for (const [request, response] of [[rpc[2], resp], [rpc[4], routed], [rpc[5], impact], [rpc[6], prepared],
+    [rpc[7], work], [rpc[8], positioning]]) {
+    const result = call(request.params.name, request.params.arguments);
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), JSON.parse(response.result.content[0].text));
+  }
+  const fromFile = local(['call', 'novelos_pro_plan_chapter', path.join(root, 'chapter-plan.example.json')]);
+  assert.equal(fromFile.status, 0, fromFile.stderr);
+  assert.equal(JSON.parse(fromFile.stdout).decision, 'READY_FOR_HANDOFF');
+  const invalidInput = local(['call', 'novelos_pro_plan_chapter', '-'], '[]');
+  assert.equal(invalidInput.status, 1);
+  assert.equal(invalidInput.stdout, '');
+  assert.match(invalidInput.stderr, /JSON object/);
+  assert.equal(call('approve', {}).status, 1);
   assert.deepEqual(fs.readdirSync(vault), []);
 
   const canon = path.join(root, 'NovelOS/tools/pro/canon.mjs');

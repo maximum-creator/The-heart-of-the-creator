@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "edition": "NovelOS Pro",
-  "version": "1.11.1",
+  "version": "1.12.0",
   "roles": {
     "novelos-pro-director": {
       "name": "总导演",
@@ -74,17 +74,6 @@
       "goal": "只执行锁定片段替换。",
       "cap": 4096
     },
-    "novelos-pro-operator": {
-      "name": "工具管理员",
-      "model": {
-        "modelId": "feelfish",
-        "modelName": "feelfish/gemini-4-argon",
-        "enableThinkingMode": true,
-        "reasoningEffort": "low"
-      },
-      "goal": "优先直接复用已取得的 MCP 回执。需要宿主代调时，按一次任务交接复用会话，只核验、只回传。",
-      "cap": 2048
-    },
     "novelos-pro-continuity": {
       "name": "连续性审计员",
       "model": {
@@ -109,7 +98,7 @@
         "enableThinkingMode": true,
         "reasoningEffort": "low"
       },
-      "goal": "保存每次试写，提取候选状态，待作者批准后交接正式快照。",
+      "goal": "对当前成品提议需审计的状态差量；保存和批准走本地流程。",
       "cap": 3072
     },
     "novelos-pro-arbiter": {

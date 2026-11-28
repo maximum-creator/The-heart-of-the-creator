@@ -19,7 +19,7 @@
 
 ## 调度和证据
 
-向工具管理员传 `bookId`、下一章 `chapter`、批准的 `parentVersion`、最多十个 `requiredFactKeys` 和 `risks`。风险从卷纲与作者任务判定。
+本机直调 `novelos_pro_plan_chapter`，传 `bookId`、下一章 `chapter`、批准的 `parentVersion`、最多十个 `requiredFactKeys` 和 `risks`。风险从卷纲与作者任务判定。可用 `node NovelOS/tools/pro/mcp.mjs call novelos_pro_plan_chapter <参数.json>` 运行。
 
 可带最多十个 `activeThreads`。返回的 `suggestedEvidence` 包含活跃线和已到期的开放承诺，按兑现章排序。查看 `dueCount` 和 `omittedSuggestions`，有取证遗漏时缩小到故事线或点名所需事实。到期项进入关键章路径，导演决定本章兑现、延后或请求作者裁决。
 

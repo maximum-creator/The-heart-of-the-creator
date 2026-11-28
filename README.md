@@ -100,6 +100,6 @@ MIT License。你可以使用、修改和分发，但模型服务、FeelFish 及
 
 ## NovelOS Pro
 
-[NovelOS Pro 1.11.1](pro/README.md) 是独立的本地长篇连载与剧本方案。提供卷前市场定位检查、群像章包、逐轮返工和作者终审。
+[NovelOS Pro 1.12.0](pro/README.md) 是独立的本地长篇连载与剧本方案。提供卷前市场定位检查、群像章包、逐轮返工和作者终审。
 
 用 `node scripts/build-novelos-pro.mjs <尚不存在的本地目录>` 生成可导入 FeelFish 的独立项目。
