@@ -55,7 +55,7 @@ test('offline or host-only reports never prove upstream delivery; drift and trun
   assert.equal(auditRuntime({ routes, role, observed: { ...upstream, finishReason: 'length' } }).truncated, true);
   assert.equal(auditRuntime({ routes, role: 'novelos-pro-director', mode: 'FAST', observed: {} }).expected.effort, 'medium');
   assert.equal(auditRuntime({ routes, role: 'novelos-pro-director', mode: 'DEEP', observed: {} }).expected.effort, 'high');
-  assert.equal(auditRuntime({ routes, role: 'novelos-pro-continuity', mode: 'STANDARD', observed: {} }).expected.effort, 'high');
+  assert.equal(auditRuntime({ routes, role: 'novelos-pro-continuity', mode: 'STANDARD', observed: {} }).expected.effort, 'medium');
 });
 
 test('truncated raw stays recoverable; a new chapter sees only the approved matching draft and delta', (t) => {
@@ -85,6 +85,12 @@ test('truncated raw stays recoverable; a new chapter sees only the approved matc
   const missing = planChapter(root, { ...request, requiredFactKeys: ['knowledge:客人.钥匙位置'] });
   assert.equal(missing.decision, 'MISSING_EVIDENCE');
   assert.equal(missing.dispatch, undefined);
+  const creativeOnly = planChapter(root, { ...request, risks: ['creative_difficulty'] });
+  assert.equal(creativeOnly.mode, 'STANDARD');
+  assert.deepEqual(creativeOnly.dispatch.beforeDraft, ['novelos-pro-opus']);
+  assert.deepEqual(creativeOnly.dispatch.afterDraft, ['novelos-pro-reader', 'novelos-pro-continuity']);
+  const finale = planChapter(root, { ...request, risks: ['volume_end'] });
+  assert.deepEqual(finale.dispatch.beforeDraft, ['novelos-pro-arbiter']);
   const critical = planChapter(root, { ...request, risks: ['foreshadow_payoff', 'creative_difficulty'] });
   assert.equal(critical.mode, 'STANDARD');
   assert.deepEqual(critical.dispatch.beforeDraft, ['novelos-pro-opus', 'novelos-pro-dramaturg']);

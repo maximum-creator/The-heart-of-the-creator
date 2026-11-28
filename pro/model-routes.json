@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "edition": "NovelOS Pro",
-  "version": "1.11.0",
+  "version": "1.11.1",
   "roles": {
     "novelos-pro-director": {
       "name": "总导演",
@@ -22,8 +22,8 @@
     "novelos-pro-dramaturg": {
       "name": "场景架构师",
       "model": {
-        "modelId": "novelos-pro-openrouter",
-        "modelName": "anthropic/claude-sonnet-5.5",
+        "modelId": "feelfish",
+        "modelName": "feelfish/claude-sonnet-4-6",
         "enableThinkingMode": true,
         "reasoningEffort": "medium"
       },
@@ -55,8 +55,8 @@
     "novelos-pro-reader": {
       "name": "独立读者",
       "model": {
-        "modelId": "novelos-pro-openrouter",
-        "modelName": "anthropic/claude-sonnet-5.5",
+        "modelId": "feelfish",
+        "modelName": "feelfish/claude-sonnet-4-6",
         "enableThinkingMode": true,
         "reasoningEffort": "medium"
       },
@@ -66,8 +66,8 @@
     "novelos-pro-editor": {
       "name": "局部编辑",
       "model": {
-        "modelId": "novelos-pro-openrouter",
-        "modelName": "anthropic/claude-sonnet-5.5",
+        "modelId": "feelfish",
+        "modelName": "feelfish/claude-sonnet-4-6",
         "enableThinkingMode": true,
         "reasoningEffort": "low"
       },
@@ -78,11 +78,11 @@
       "name": "工具管理员",
       "model": {
         "modelId": "feelfish",
-        "modelName": "feelfish/gemini-3.8-flash",
+        "modelName": "feelfish/gemini-4-argon",
         "enableThinkingMode": true,
         "reasoningEffort": "low"
       },
-      "goal": "只核验、只回传工具结果。离线脚本也可直接用同样的 MCP。",
+      "goal": "优先直接复用已取得的 MCP 回执。需要宿主代调时，按一次任务交接复用会话，只核验、只回传。",
       "cap": 2048
     },
     "novelos-pro-continuity": {
@@ -93,11 +93,11 @@
         "enableThinkingMode": true,
         "reasoningEffort": "medium"
       },
-      "goal": "新会话检查批准快照、当前稿与变更证据；关键章用 high。",
+      "goal": "检查批准快照、当前稿与变更证据。日常和关键章用 medium，卷级硬冲突升 high。",
       "cap": 4096,
       "effortByMode": {
         "FAST": "medium",
-        "STANDARD": "high",
+        "STANDARD": "medium",
         "DEEP": "high"
       }
     },
@@ -105,7 +105,7 @@
       "name": "书稿与状态管理员",
       "model": {
         "modelId": "feelfish",
-        "modelName": "feelfish/gemini-3.8-flash",
+        "modelName": "feelfish/gemini-4-argon",
         "enableThinkingMode": true,
         "reasoningEffort": "low"
       },
@@ -120,7 +120,7 @@
         "enableThinkingMode": true,
         "reasoningEffort": "high"
       },
-      "goal": "卷末或跨章重排、冲突未解时做独立复核；逐条给出证据及受影响章节。",
+      "goal": "只在卷末、跨章重排或未解的跨章硬冲突时做独立复核；逐条给出证据及受影响章节。",
       "cap": 6144
     }
   }

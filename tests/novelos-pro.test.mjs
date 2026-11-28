@@ -65,10 +65,15 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
     arbiter: 'feelfish/gpt-6.2-astra',
     opus: 'feelfish/claude-opus-5-5',
     gemini: 'feelfish/gemini-4-carbon',
-    reader: 'anthropic/claude-sonnet-5.5',
+    dramaturg: 'feelfish/claude-sonnet-4-6',
+    reader: 'feelfish/claude-sonnet-4-6',
+    editor: 'feelfish/claude-sonnet-4-6',
+    operator: 'feelfish/gemini-4-argon',
+    curator: 'feelfish/gemini-4-argon',
   })) {
     const id = 'novelos-pro-' + role;
     assert.equal(active.agentModels[id].modelName, expected);
+    assert.equal(active.agentModels[id].modelId, 'feelfish');
     assert.deepEqual(solution.agents.find((agent) => agent.id === id).recommendedModel, active.agentModels[id]);
   }
   assert.match(read('templates/longform-handoff.md'), /唯一|两章离线应验例/);
@@ -85,6 +90,9 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   const mutated = structuredClone(manifest.roles);
   mutated['novelos-pro-opus'].model.temperature = 0.8;
   assert.throws(() => validateProRoutes(mutated), /sampling defaults/);
+  delete mutated['novelos-pro-opus'].model.temperature;
+  mutated['novelos-pro-operator'].model.modelName = 'feelfish/gemini-3.8-flash';
+  assert.throws(() => validateProRoutes(mutated), /Gemini 4/);
   const rpc = [
     { id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } },
     { id: 2, method: 'tools/list' },
@@ -114,7 +122,7 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   assert.equal(run.status, 0, run.stderr);
   const [invalid, init, list, resp, bad, routed, impact, prepared, work, positioning] = run.stdout.trim().split('\n').map(JSON.parse);
   assert.equal(invalid.error.code, -32600);
-  assert.equal(init.result.serverInfo.version, '1.11.0');
+  assert.equal(init.result.serverInfo.version, '1.11.1');
   assert.equal(list.result.tools.length, 11);
   assert.deepEqual(bindings.get('novelos-pro-operator').tools,
     list.result.tools.map((tool) => tool.name));

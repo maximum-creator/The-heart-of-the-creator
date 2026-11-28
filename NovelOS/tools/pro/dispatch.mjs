@@ -5,7 +5,7 @@ const risks = [
   'timeline_jump', 'volume_end', 'cross_chapter_replan', 'unresolved_conflict', 'sample_review',
 ];
 const deep = ['volume_end', 'cross_chapter_replan', 'unresolved_conflict'];
-const standard = ['creative_difficulty', 'viewpoint_change', 'relationship_turn', 'foreshadow_payoff', 'timeline_jump'];
+const sceneDesign = ['viewpoint_change', 'relationship_turn', 'foreshadow_payoff', 'timeline_jump', 'cross_chapter_replan'];
 
 export const chapterPlanSchema = {
   type: 'object',
@@ -16,7 +16,8 @@ export const chapterPlanSchema = {
     requiredFactKeys: { type: 'array', maxItems: 10, items: { type: 'string' } },
     activeThreads: { type: 'array', maxItems: 10, items: { type: 'string' } },
     sceneMode: { enum: ['SINGLE_FOCUS', 'ENSEMBLE'] },
-    risks: { type: 'array', uniqueItems: true, items: { enum: risks } },
+    risks: { type: 'array', uniqueItems: true, items: { enum: risks },
+      description: 'Use unresolved_conflict only for an unresolved cross-chapter hard conflict.' },
   },
   required: ['bookId', 'chapter', 'parentVersion', 'requiredFactKeys', 'risks'],
   additionalProperties: false,
@@ -40,12 +41,14 @@ export function planChapter(vault, input = {}) {
   if (context.missing.length) return { decision: 'MISSING_EVIDENCE', baseline, missing: context.missing };
 
   const detected = context.dueCount > 0 && !flags.includes('foreshadow_payoff') ? [...flags, 'foreshadow_payoff'] : flags;
+  const needsSceneDesign = sceneDesign.some((flag) => detected.includes(flag));
+  const needsCreativeSupport = detected.includes('creative_difficulty');
   const mode = deep.some((flag) => detected.includes(flag)) ? 'DEEP'
-    : standard.some((flag) => detected.includes(flag)) ? 'STANDARD' : 'FAST';
+    : needsSceneDesign || needsCreativeSupport ? 'STANDARD' : 'FAST';
   const beforeDraft = [
     ...(mode === 'DEEP' ? ['novelos-pro-arbiter'] : []),
-    ...(flags.includes('creative_difficulty') ? ['novelos-pro-opus'] : []),
-    ...(mode !== 'FAST' ? ['novelos-pro-dramaturg'] : []),
+    ...(needsCreativeSupport ? ['novelos-pro-opus'] : []),
+    ...(needsSceneDesign ? ['novelos-pro-dramaturg'] : []),
   ];
   const requiresReading = mode !== 'FAST' || chapter <= 3 || flags.includes('sample_review');
   const afterDraft = [

@@ -53,6 +53,9 @@ export function validateProRoutes(roles) {
     if (!/^novelos-pro-[a-z]+$/.test(id) || !model?.modelId || !model?.modelName || !Number.isInteger(cap) || cap < 1024) {
       throw new Error('Invalid Pro role ' + id);
     }
+    if (model.modelId !== 'feelfish' || !model.modelName.startsWith('feelfish/') || model.modelName.startsWith('feelfish/gemini-3')) {
+      throw new Error('Pro requires a FeelFish Cloud route and Gemini 4 for Gemini roles: ' + id);
+    }
     if (!effortLevels.includes(model.reasoningEffort) || model.enableThinkingMode !== true
       || (effortByMode && Object.entries(effortByMode).some(([mode, effort]) =>
         !['FAST', 'STANDARD', 'DEEP'].includes(mode) || !effortLevels.includes(effort)))) {

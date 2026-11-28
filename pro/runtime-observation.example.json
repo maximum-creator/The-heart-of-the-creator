@@ -1,8 +1,8 @@
 {
   "scope": "OFFLINE_FIXTURE",
   "evidenceRef": "synthetic fixture only",
-  "requestModel": "anthropic/claude-sonnet-5.5",
-  "actualModel": "anthropic/claude-sonnet-5.5",
+  "requestModel": "feelfish/claude-sonnet-4-6",
+  "actualModel": "feelfish/claude-sonnet-4-6",
   "effort": "medium",
   "maxOutputTokens": 4096,
   "sentSamplingParameters": [],
@@ -13,7 +13,7 @@
   "durationMs": 12345,
   "cost": {
     "amount": 0,
-    "currency": "USD"
+    "currency": "credits"
   },
   "provider": "Mock provider",
   "requestId": "fixture-sonnet-medium"

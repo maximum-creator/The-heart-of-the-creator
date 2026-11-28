@@ -40,6 +40,9 @@ test('four formats share the story identity while dispatch and production limits
   const routineScript = evaluateWorkReadiness(request('VERTICAL_DRAMA'));
   assert.deepEqual(routineScript.order.dispatch.beforeDraft, []);
   assert.ok(!routineScript.order.dispatch.afterDraft.includes('novelos-pro-reader'));
+  const creativeOnly = evaluateWorkReadiness(request('VERTICAL_DRAMA', ['creative_difficulty']));
+  assert.deepEqual(creativeOnly.order.dispatch.beforeDraft, ['novelos-pro-opus']);
+  assert.ok(creativeOnly.order.dispatch.afterDraft.includes('novelos-pro-reader'));
   const work = evaluateWorkReadiness(request('LONG_DRAMA', ['creative_difficulty', 'cross_unit_conflict']));
   assert.deepEqual(work.order.dispatch.beforeDraft, ['novelos-pro-arbiter', 'novelos-pro-opus', 'novelos-pro-dramaturg']);
   const broken = { ...story, beats: [story.beats[0]] };

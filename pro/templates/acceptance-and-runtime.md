@@ -2,7 +2,7 @@
 
 ## 分项核对运行参数
 
-路由目标见 `model-routes.json`。Sol 调度常规章使用 medium，卷级重排用 high；连续性审计按风险升档。Carbon 与 Opus 从 medium 起步，Astra 卷级复核用 high。省略温度、top_p 和 top_k。FeelFish 推荐档与建议预算以实际调用回执确认。
+路由目标见 `model-routes.json`。Sol 调度常规章使用 medium，卷级重排用 high；连续性审计在 FAST 和 STANDARD 用 medium，有卷级硬冲突才升 high。Sonnet 负责常规审读；已有同一基准的 MCP 回执可直接复用。Carbon 与 Opus 从 medium 起步，Astra 卷级复核用 high。省略温度、top_p 和 top_k。FeelFish 推荐档与建议预算以实际调用回执确认。
 
 用同一次调用的脱敏请求与响应填 `runtime-observation.example.json`。记录实际请求模型、实际返回模型、服务商与请求 ID、档位、发出的最大输出 Token、输入、思考及可见 Token、结束原因、耗时和费用。思考与可见 Token 依据计费详情拆分，不能从字数或一个 completion 合计反推。无明确字段留空。场景架构、盲读和局部编辑三条 Sonnet 路由分别核验。Sol 总导演额外核对实际工具调用与子会话分派。回执不要含正文、提示、密钥或原始头部。
 

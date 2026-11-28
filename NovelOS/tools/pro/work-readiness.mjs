@@ -82,16 +82,17 @@ function validatePlan(story, unit, profile) {
 
 function schedule(risks) {
   const deep = risks.includes('cross_unit_conflict');
-  const critical = deep || risks.includes('payoff') || risks.includes('creative_difficulty') || risks.includes('scene_design');
+  const needsSceneDesign = deep || risks.includes('payoff') || risks.includes('scene_design');
+  const needsCreativeSupport = risks.includes('creative_difficulty');
   return {
     director: 'novelos-pro-director', tools: 'novelos-pro-operator', writer: 'novelos-pro-gemini',
     beforeDraft: [
       ...(deep ? ['novelos-pro-arbiter'] : []),
-      ...(risks.includes('creative_difficulty') ? ['novelos-pro-opus'] : []),
-      ...(critical ? ['novelos-pro-dramaturg'] : []),
+      ...(needsCreativeSupport ? ['novelos-pro-opus'] : []),
+      ...(needsSceneDesign ? ['novelos-pro-dramaturg'] : []),
     ],
     afterDraft: [
-      ...(critical || risks.includes('sample_review') ? ['novelos-pro-reader'] : []),
+      ...(needsSceneDesign || needsCreativeSupport || risks.includes('sample_review') ? ['novelos-pro-reader'] : []),
       'novelos-pro-continuity', 'novelos-pro-curator',
     ],
     localEdit: 'novelos-pro-editor', approval: 'AUTHOR',
