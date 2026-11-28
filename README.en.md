@@ -116,4 +116,4 @@ See [Contributing](CONTRIBUTING.md), the [changelog](CHANGELOG.md), and the [min
 
 ## NovelOS Pro
 
-[NovelOS Pro 1.8.0](pro/README.md) is a separate local FeelFish setup for serial fiction and scripts. The shared story plan supports distinct checks for novels, vertical drama, long drama, and comic drama. Carbon writes, Opus supports creative decisions, Sol directs and audits continuity, Astra reviews volume-level conflicts, and Sonnet handles scene planning, blind reading, and local edits.
+[NovelOS Pro 1.9.0](pro/README.md) is a separate local FeelFish setup for serial fiction and scripts. Four formats share a story plan and retain distinct delivery checks. Author-directed rework preserves the original, binds edits to selected passages, and records independent review.

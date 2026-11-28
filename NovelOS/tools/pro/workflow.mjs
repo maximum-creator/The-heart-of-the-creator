@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { auditRawProseDelivery } from '../eval/raw-prose-delivery-audit.mjs';
+import { applyAuthorRework } from './rework.mjs';
 
 const endMarker = '[NOVELOS END]';
 const titlePattern = /^(?=.{1,80}$)(?:第[\p{L}\p{N}]{1,10}[章回节][ \t·：:]*)?(?=.*[\p{L}\p{N}])[\p{L}\p{N} \t·：:，、？！?!—–（）()《》「」“”‘’\-]+$/u;
@@ -62,6 +63,7 @@ export function lockIssue({ prose, proseSha256, kind, quote, reason } = {}) {
 }
 
 export function applyEdit({ prose, order, replacement } = {}) {
+  if (order?.kind === 'AUTHOR_REWORK') return applyAuthorRework({ prose, order, replacement });
   if (!order || order.kind !== 'LOCAL') throw new Error('A locked local order is required');
   const current = lockIssue({ ...order, prose }).order;
   if (current.orderSha256 !== order.orderSha256 || current.start !== order.start || current.end !== order.end) throw new Error('Revision order is stale or was altered');

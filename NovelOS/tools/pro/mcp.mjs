@@ -3,6 +3,7 @@ import { checkPacket, lockIssue, applyEdit } from './workflow.mjs';
 import { chapterPlanSchema, planChapter } from './dispatch.mjs';
 import { prepareChapter, reviewChapterImpact, verifyChapterDelivery } from './canon.mjs';
 import { evaluateWorkReadiness } from './work-readiness.mjs';
+import { planAuthorRework, checkAuthorRework } from './rework.mjs';
 
 const str = { type: 'string' };
 const object = { type: 'object' };
@@ -28,7 +29,15 @@ const tools = [
     raw: str, finishReason: str, finishEvidence: object, handoff: object, runId: str,
   }, ['raw']), (args) => verifyChapterDelivery(process.env.NOVELOS_PRO_VAULT, args)],
   ['novelos_pro_lock_issue', 'Bind one unique quote and reading issue to the original prose.', props({ prose: str, proseSha256: str, kind: { enum: ['KEEP', 'LOCAL', 'STRUCTURAL'] }, quote: str, reason: str }, ['prose', 'proseSha256', 'kind']), lockIssue],
-  ['novelos_pro_apply_edit', 'Return a one-span revision while freezing the rest of the prose.', props({ prose: str, order: object, replacement: str }, ['prose', 'order', 'replacement']), applyEdit],
+  ['novelos_pro_apply_edit', 'Apply a locked single edit or an author-scoped rework batch.', props({
+    prose: str, order: object, replacement: { anyOf: [str, object] },
+  }, ['prose', 'order', 'replacement']), applyEdit],
+  ['novelos_pro_plan_rework', 'Lock up to five author-selected passages and route structural or Canon changes to review.', props({
+    prose: str, proseSha256: str, issues: { type: 'array', maxItems: 5, items: object },
+  }, ['prose', 'proseSha256', 'issues']), planAuthorRework],
+  ['novelos_pro_check_rework', 'Check every replacement against its author feedback and require a separate reviewer.', props({
+    prose: str, order: object, replacement: object, report: object,
+  }, ['prose', 'order', 'replacement', 'report']), checkAuthorRework],
 ];
 const send = (message) => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', ...message }) + '\n');
 const loop = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
@@ -45,7 +54,7 @@ for await (const line of loop) {
   const { id, method, params } = request;
   if (method === 'initialize') {
     send({ id, result: { protocolVersion: ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'].includes(params?.protocolVersion) ? params.protocolVersion : '2024-11-05',
-      serverInfo: { name: 'novelos-pro', version: '1.8.0' }, capabilities: { tools: {} } } });
+      serverInfo: { name: 'novelos-pro', version: '1.9.0' }, capabilities: { tools: {} } } });
   } else if (method === 'ping') send({ id, result: {} });
   else if (method === 'tools/list') send({ id, result: { tools: tools.map(([name, description, inputSchema]) => ({ name, description, inputSchema })) } });
   else if (method === 'tools/call') {

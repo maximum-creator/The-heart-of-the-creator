@@ -1,3 +1,6 @@
+import { checkAuthorRework } from './rework.mjs';
+import { checkDelivery } from './workflow.mjs';
+
 const aspects = ['continuity', 'viewpoint', 'causality'];
 const decisions = ['PASS', 'AUTHOR_REVIEW', 'BLOCK'];
 const fail = (message) => { throw new Error(message); };
@@ -12,7 +15,7 @@ export function validateQualityReview(candidate, dependencies, report) {
     if (candidate.final.indexOf(quote, index + 1) !== -1) fail('Quality review quote must uniquely locate the passage');
     return { quote, line: candidate.final.slice(0, index).split('\n').length };
   };
-  const { reviewer, checks, inherited, stateChanges, reading } = report ?? {};
+  const { reviewer, checks, inherited, stateChanges, reading, rework } = report ?? {};
   if (!text(reviewer, 100) || !Array.isArray(checks) || checks.length !== aspects.length
     || new Set(checks.map((check) => check?.aspect)).size !== aspects.length) fail('Incomplete continuity review');
   function reviewItem(item) {
@@ -55,8 +58,11 @@ export function validateQualityReview(candidate, dependencies, report) {
     readerReview = { reviewer: reading.reviewer, ...reviewItem(reading),
       keep: { ...locate(reading.keep.quote), note: reading.keep.note } };
   }
-  const judgments = [...checked, ...inheritedReview, ...changeReview, ...(readerReview ? [readerReview] : [])];
+  const reworkReview = candidate.edit?.order?.kind === 'AUTHOR_REWORK'
+    ? checkAuthorRework({ prose: checkDelivery({ raw: candidate.raw }).prose, ...candidate.edit, report: rework }) : null;
+  const judgments = [...checked, ...inheritedReview, ...changeReview, ...(readerReview ? [readerReview] : []), ...(reworkReview?.findings ?? [])];
   const hasBlocker = judgments.some((item) => item.decision === 'BLOCK');
   const authorNotes = judgments.filter((item) => item.decision === 'AUTHOR_REVIEW');
-  return { reviewer, checks: checked, inherited: inheritedReview, stateChanges: changeReview, reading: readerReview, hasBlocker, authorNotes };
+  return { reviewer, checks: checked, inherited: inheritedReview, stateChanges: changeReview, reading: readerReview,
+    ...(reworkReview && { rework: reworkReview }), hasBlocker, authorNotes };
 }

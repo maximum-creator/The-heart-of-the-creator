@@ -332,10 +332,17 @@ export function reviewCandidate(root, { bookId, runId }) {
   need(candidate.bookId === bookId && candidate.runId === runId, 'Saved candidate identity mismatch');
   const proof = describeCandidate(root, candidate);
   const { chapter, parentVersion, raw, final, edit, changes, audit } = candidate;
+  let editView = null;
+  if (edit?.order.kind === 'AUTHOR_REWORK') {
+    const receipt = applyEdit({ prose: checkDelivery({ raw }).prose, ...edit });
+    editView = { reworkSha256: receipt.reworkSha256, changes: receipt.changes,
+      authorFeedback: edit.order.issues.map(({ id, authorNote, categories, diagnosis, preserve, strategy }) =>
+        ({ id, authorNote, categories, diagnosis, preserve, strategy })) };
+  } else if (edit) editView = { before: edit.order.quote, after: edit.replacement, reason: edit.order.reason };
   return { decision: !proof.auditMatches ? 'AUDIT_REFRESH_REQUIRED'
     : proof.qualityStatus === 'QUALITY_REVIEW_PRESENT' ? 'AUTHOR_REVIEW_REQUIRED' : proof.qualityStatus,
     bookId, runId, chapter, parentVersion, proof, raw, final,
-    edit: edit ? { before: edit.order.quote, after: edit.replacement, reason: edit.order.reason } : null,
+    edit: editView,
     changes, auditReference: audit?.evidenceRef };
 }
 

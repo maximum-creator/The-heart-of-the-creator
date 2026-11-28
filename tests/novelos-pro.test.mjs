@@ -112,8 +112,8 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   assert.equal(run.status, 0, run.stderr);
   const [invalid, init, list, resp, bad, routed, impact, prepared, work] = run.stdout.trim().split('\n').map(JSON.parse);
   assert.equal(invalid.error.code, -32600);
-  assert.equal(init.result.serverInfo.version, '1.8.0');
-  assert.equal(list.result.tools.length, 8);
+  assert.equal(init.result.serverInfo.version, '1.9.0');
+  assert.equal(list.result.tools.length, 10);
   assert.deepEqual(bindings.get('novelos-pro-operator').tools,
     list.result.tools.map((tool) => tool.name));
   assert.ok(list.result.tools.some((tool) => tool.name === 'novelos_pro_review_impact'));
