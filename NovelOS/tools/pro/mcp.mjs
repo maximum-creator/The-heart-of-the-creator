@@ -1,7 +1,7 @@
 import readline from 'node:readline';
 import { checkPacket, lockIssue, applyEdit } from './workflow.mjs';
 import { chapterPlanSchema, planChapter } from './dispatch.mjs';
-import { prepareChapter, reviewChapterImpact, verifyChapterDelivery } from './canon.mjs';
+import { prepareChapter, readReworkHistory, reviewChapterImpact, verifyChapterDelivery } from './canon.mjs';
 import { evaluateWorkReadiness } from './work-readiness.mjs';
 import { planAuthorRework, checkAuthorRework } from './rework.mjs';
 
@@ -38,6 +38,9 @@ const tools = [
   ['novelos_pro_check_rework', 'Check every replacement against its author feedback and require a separate reviewer.', props({
     prose: str, order: object, replacement: object, report: object,
   }, ['prose', 'order', 'replacement', 'report']), checkAuthorRework],
+  ['novelos_pro_rework_history', 'Read a run’s archived drafts, or return the exact selected version and its predecessor diff.', props({
+    bookId: str, runId: str, candidateSha256: str,
+  }, ['bookId', 'runId']), (args) => readReworkHistory(process.env.NOVELOS_PRO_VAULT, args)],
 ];
 const send = (message) => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', ...message }) + '\n');
 const loop = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
@@ -54,7 +57,7 @@ for await (const line of loop) {
   const { id, method, params } = request;
   if (method === 'initialize') {
     send({ id, result: { protocolVersion: ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'].includes(params?.protocolVersion) ? params.protocolVersion : '2024-11-05',
-      serverInfo: { name: 'novelos-pro', version: '1.9.0' }, capabilities: { tools: {} } } });
+      serverInfo: { name: 'novelos-pro', version: '1.10.0' }, capabilities: { tools: {} } } });
   } else if (method === 'ping') send({ id, result: {} });
   else if (method === 'tools/list') send({ id, result: { tools: tools.map(([name, description, inputSchema]) => ({ name, description, inputSchema })) } });
   else if (method === 'tools/call') {

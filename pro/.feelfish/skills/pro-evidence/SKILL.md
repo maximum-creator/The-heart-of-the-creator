@@ -11,3 +11,5 @@ description: 按 Pro MCP 的工具契约核验交接。
 用 `novelos_pro_evaluate_work` 核对载体、四段故事线和制作要求；终审时原样传本次成品或由本地 CLI 读文件。保持 OFFLINE_ONLY、缺真实证据、版本失效和作者批准的区别。只转交工具结论和佐证，不把该工具当作读者调查或桌读。
 
 作者点段用 `novelos_pro_plan_rework` 锁定版本和选择范围，原样回传返工单。通过 `novelos_pro_apply_edit` 生成替换结果。由独立复审员提交 `novelos_pro_check_rework` 所需的逐项判断和保护项，主笔和编辑不自审。保存原稿、返工单、改稿、复审及差异。
+
+继续改稿前先用 `novelos_pro_rework_history` 读取作者所点的候选哈希、正文和上一轮差异。目录只读，作者的选择和批准由本地命令执行。意见针对改后稿时，交付使用改后稿自己的版本和选段。

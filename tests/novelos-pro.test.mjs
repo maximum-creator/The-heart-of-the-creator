@@ -112,8 +112,8 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   assert.equal(run.status, 0, run.stderr);
   const [invalid, init, list, resp, bad, routed, impact, prepared, work] = run.stdout.trim().split('\n').map(JSON.parse);
   assert.equal(invalid.error.code, -32600);
-  assert.equal(init.result.serverInfo.version, '1.9.0');
-  assert.equal(list.result.tools.length, 10);
+  assert.equal(init.result.serverInfo.version, '1.10.0');
+  assert.equal(list.result.tools.length, 11);
   assert.deepEqual(bindings.get('novelos-pro-operator').tools,
     list.result.tools.map((tool) => tool.name));
   assert.ok(list.result.tools.some((tool) => tool.name === 'novelos_pro_review_impact'));
@@ -139,4 +139,16 @@ test('Pro package has exact routing, embedded writer rules and a runnable MCP ov
   assert.equal(review.decision, 'AUTHOR_REVIEW_REQUIRED');
   assert.equal(review.proof.quality.stateChanges[0].key, 'knowledge:伙计.钥匙位置');
   assert.equal(review.proof.quality.stateChanges[0].line, 3);
+  const archived = JSON.parse(cli('rework-save', vault, candidate).stdout);
+  assert.equal(archived.decision, 'REWORK_VERSION_SAVED');
+  const history = JSON.parse(cli('rework-history', vault, 'example-book', 'chapter-01-a').stdout);
+  assert.equal(history.versions.length, 1);
+  assert.equal(history.decisionHistoryHead.eventSha256, archived.eventSha256);
+  const selection = path.join(temp, 'select.json');
+  fs.writeFileSync(selection, JSON.stringify({ bookId: 'example-book', runId: 'chapter-01-a',
+    candidateSha256: archived.candidateSha256, expectedEventSha256: archived.eventSha256, authorRef: 'packaged CLI fixture' }));
+  const chosen = JSON.parse(cli('rework-select', vault, selection).stdout);
+  const approved = cli('approve', vault, 'example-book', 'chapter-01-a', archived.candidateSha256,
+    'packaged CLI fixture', '--selection=' + chosen.selectionSha256, '--manual-delivery-reviewed');
+  assert.equal(JSON.parse(approved.stdout).decision, 'CANON_APPROVED');
 });

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkPacket, checkDelivery, applyEdit } from './workflow.mjs';
 import { matchesRuntimeModel } from './runtime-audit.mjs';
-import { validateQualityReview } from './quality-review.mjs';
+import { openReviewKeys, validateQualityReview } from './quality-review.mjs';
 
 const digest = (s) => crypto.createHash('sha256').update(s, 'utf8').digest('hex');
 const json = (value) => JSON.stringify(value, null, 2) + '\n';
@@ -49,6 +49,77 @@ function writeOnce(file, value) {
   }
 }
 const chapterFile = (dir, chapter) => path.join(dir, String(chapter).padStart(8, '0') + '.json');
+
+function runDirectory(book, runId, suffix, create = false) {
+  need(typeof runId === 'string' && id.test(runId), 'Invalid run id');
+  return folder(folder(book, 'runs', create), runId + suffix, create);
+}
+
+function findCandidate(book, bookId, runId, sha) {
+  const versions = runDirectory(book, runId, '.versions');
+  if (sha !== undefined) need(typeof sha === 'string' && hex.test(sha), 'Invalid candidate hash');
+  const archived = sha && path.join(versions, sha + '.json');
+  const legacy = path.join(path.dirname(versions), runId + '.json');
+  const file = archived && fs.existsSync(archived) ? archived : legacy;
+  if (!fs.existsSync(file)) return null;
+  const candidate = read(file);
+  need(candidate.bookId === bookId && candidate.runId === runId, 'Saved candidate identity mismatch');
+  const version = digest(json(candidate));
+  if (sha && version !== sha) {
+    need(file !== archived, 'Archived candidate hash mismatch');
+    return null;
+  }
+  return candidate;
+}
+
+function runDecision(book, runId) {
+  const dir = runDirectory(book, runId, '.decisions');
+  if (!fs.existsSync(dir)) return null;
+  const count = fs.readdirSync(dir).filter((name) => /^\d{8}\.json$/u.test(name)).length;
+  if (!count) return null;
+  const event = read(chapterFile(dir, count));
+  const { eventSha256, ...record } = event;
+  need(record.sequence === count && eventSha256 === digest(json(record)), 'Corrupted rework decision history');
+  return event;
+}
+
+function recordRunDecision(book, runId, previous, decision) {
+  const sequence = (previous?.sequence ?? 0) + 1;
+  const record = { sequence, previousEventSha256: previous?.eventSha256 ?? null, ...decision };
+  const event = { ...record, eventSha256: digest(json(record)) };
+  try { append(chapterFile(runDirectory(book, runId, '.decisions', true), sequence), event); }
+  catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    throw new Error('Rework decision changed concurrently; reload the run before retrying');
+  }
+  return event;
+}
+
+function reworkSource(root, candidate, originalProse) {
+  if (candidate.parentCandidateSha256 === undefined) return originalProse;
+  need(candidate.edit?.order?.kind === 'AUTHOR_REWORK', 'A successor needs a scoped author rework order');
+  const { bookId, runId, parentCandidateSha256 } = candidate;
+  need(typeof parentCandidateSha256 === 'string' && hex.test(parentCandidateSha256), 'Invalid parent candidate hash');
+  const parent = findCandidate(bookRoot(root, bookId, false), bookId, runId, parentCandidateSha256);
+  need(parent && ['bookId', 'runId', 'chapter', 'parentVersion', 'raw', 'finishReason', 'finishEvidence', 'packet', 'handoff', 'evidenceKeys']
+    .every((key) => json(parent[key]) === json(candidate[key])), 'Rework parent is missing or belongs to a different run or chapter packet');
+  return parent.final;
+}
+
+function parentReviewState(root, candidate) {
+  const { bookId, runId } = candidate;
+  const sha = candidate.parentCandidateSha256;
+  if (!sha) return null;
+  const book = bookRoot(root, bookId, false);
+  const parent = findCandidate(book, bookId, runId, sha);
+  need(parent, 'Rework ancestor was not saved');
+  const saved = storedQuality(root, parent, sha);
+  const earlier = parentReviewState(root, parent);
+  const outdated = saved && earlier && (earlier.needsParentReview
+    || json(saved.quality.priorBlockers?.map(({ key }) => key) ?? []) !== json(earlier.pendingParentBlockers));
+  return { pendingParentBlockers: saved ? openReviewKeys(saved.quality, sha) : [],
+    needsParentReview: Boolean((parent.edit && !saved) || outdated) };
+}
 
 function snapshot(dir, bookId, chapter) {
   if (!chapter) return { bookId, chapter: 0, version: 'GENESIS', facts: {} };
@@ -235,8 +306,10 @@ function inspect(root, candidate, base) {
   need(delivery.decision !== 'BLOCK_RECEIPT_MISMATCH', 'Delivery receipt does not match this run');
   need(delivery.decision !== 'BLOCK_MODEL_DRIFT', 'Actual writer differs from the Carbon route');
   need(['READY_FOR_READING', 'REVIEW_WITHOUT_STOP_RECEIPT'].includes(delivery.decision), 'Incomplete or blocked raw delivery');
+  const editSource = reworkSource(root, candidate, delivery.prose);
+  const parentReview = parentReviewState(root, candidate);
   if (edit) {
-    const revision = applyEdit({ prose: delivery.prose, order: edit.order, replacement: edit.replacement });
+    const revision = applyEdit({ prose: editSource, order: edit.order, replacement: edit.replacement });
     need(revision.revised === final, 'Final differs from the locked local edit');
     need(checkDelivery({ raw: final + '\n[NOVELOS END]' }).decision === 'REVIEW_WITHOUT_STOP_RECEIPT',
       'Revised final does not satisfy the prose delivery contract');
@@ -285,13 +358,15 @@ function inspect(root, candidate, base) {
     ...(dependencies && { dependencies, evidenceSha256 }),
     ...(binding && { ...binding, dueDecisions: prepared.handoff.dueDecisions }),
     deliveryStatus: manualDeliveryReviewRequired ? 'REVIEW_WITHOUT_STOP_RECEIPT' : delivery.decision,
-    manualDeliveryReviewRequired, facts };
+    manualDeliveryReviewRequired, facts, editSource,
+    ...parentReview };
 }
 
 export function saveQualityReview(root, { candidate, report }) {
   const inspected = inspect(root, candidate, readCanon(root, candidate.bookId));
   need(inspected.auditMatches, 'Matching continuity audit is required');
-  const quality = validateQualityReview(candidate, inspected.dependencies, report);
+  need(!inspected.needsParentReview, 'Record or refresh the parent round review before submitting a successor review');
+  const quality = validateQualityReview(candidate, inspected.dependencies, report, inspected.editSource, inspected.pendingParentBlockers);
   const candidateSha256 = digest(json(candidate));
   const dir = folder(bookRoot(root, candidate.bookId), 'quality-reviews');
   const qualitySha256 = digest(json(quality));
@@ -299,42 +374,72 @@ export function saveQualityReview(root, { candidate, report }) {
   return { decision: quality.hasBlocker ? 'QUALITY_BLOCKED' : 'QUALITY_REVIEW_SAVED', candidateSha256, qualitySha256 };
 }
 
+function storedQuality(root, candidate, candidateSha256) {
+  const dir = folder(bookRoot(root, candidate.bookId, false), 'quality-reviews', false);
+  const file = path.join(dir, candidateSha256 + '.json');
+  if (!fs.existsSync(file)) return null;
+  const saved = read(file);
+  need(saved.candidateSha256 === candidateSha256 && saved.qualitySha256 === digest(json(saved.quality)), 'Stored quality review version mismatch');
+  return saved;
+}
+
 function inspectWithQuality(root, candidate, base) {
   const inspected = inspect(root, candidate, base);
   const candidateSha256 = digest(json(candidate));
-  const dir = folder(bookRoot(root, candidate.bookId, false), 'quality-reviews', false);
-  const file = path.join(dir, candidateSha256 + '.json');
-  if (!fs.existsSync(file)) return { ...inspected, candidateSha256, qualityStatus: 'QUALITY_REPORT_MISSING' };
-  const saved = read(file);
-  const quality = validateQualityReview(candidate, inspected.dependencies, saved.quality);
-  need(saved.candidateSha256 === candidateSha256 && saved.qualitySha256 === digest(json(quality)), 'Stored quality review version mismatch');
+  const saved = storedQuality(root, candidate, candidateSha256);
+  if (!saved) return { ...inspected, candidateSha256, qualityStatus: 'QUALITY_REPORT_MISSING' };
+  need(!inspected.needsParentReview, 'Parent round review is missing or outdated');
+  const quality = validateQualityReview(candidate, inspected.dependencies, saved.quality, inspected.editSource, inspected.pendingParentBlockers);
+  need(saved.qualitySha256 === digest(json(quality)), 'Stored quality review no longer matches the evidence');
   return { ...inspected, candidateSha256, quality, qualitySha256: saved.qualitySha256,
     qualityStatus: quality.hasBlocker ? 'QUALITY_BLOCKED' : 'QUALITY_REVIEW_PRESENT' };
 }
 
 export function describeCandidate(root, candidate) {
-  const { facts, ...result } = inspectWithQuality(root, candidate, readCanon(root, candidate.bookId));
+  const { facts, editSource, ...result } = inspectWithQuality(root, candidate, readCanon(root, candidate.bookId));
   return result;
 }
+
+export function saveReworkVersion(root, candidate) {
+  const { bookId, runId } = candidate;
+  inspect(root, candidate, readCanon(root, bookId));
+  const book = bookRoot(root, bookId);
+  const initial = runDecision(book, runId);
+  need(initial?.kind !== 'CLAIM', 'This writing run is committed to approval');
+  saveRaw(root, candidate);
+  const tip = initial ?? recordRunDecision(book, runId, null, { kind: 'BEGIN_REWORK' });
+  const candidateSha256 = digest(json(candidate));
+  const dir = runDirectory(book, runId, '.versions', true);
+  writeOnce(path.join(dir, candidateSha256 + '.json'), candidate);
+  return { decision: 'REWORK_VERSION_SAVED', candidateSha256, parentCandidateSha256: candidate.parentCandidateSha256 ?? null,
+    eventSha256: tip.eventSha256, finalSha256: digest(candidate.final) };
+}
+
 export function stageCandidate(root, candidate) {
   const artifacts = describeCandidate(root, candidate);
   need(artifacts.auditMatches, 'Matching continuity audit is required');
   need(artifacts.qualityStatus === 'QUALITY_REVIEW_PRESENT', 'Candidate quality review is missing or blocked: ' + artifacts.qualityStatus);
+  const book = bookRoot(root, candidate.bookId);
+  if (candidate.parentCandidateSha256 !== undefined || runDecision(book, candidate.runId)) {
+    saveReworkVersion(root, candidate);
+    return { decision: 'CANDIDATE_STAGED', ...artifacts };
+  }
   saveRaw(root, candidate);
   const dir = folder(bookRoot(root, candidate.bookId), 'runs');
   writeOnce(path.join(dir, candidate.runId + '.json'), candidate);
   return { decision: 'CANDIDATE_STAGED', ...artifacts };
 }
 
-export function reviewCandidate(root, { bookId, runId }) {
-  need(typeof runId === 'string' && id.test(runId), 'Invalid run id');
-  const candidate = read(path.join(folder(bookRoot(root, bookId, false), 'runs', false), runId + '.json'));
-  need(candidate.bookId === bookId && candidate.runId === runId, 'Saved candidate identity mismatch');
+export function reviewCandidate(root, { bookId, runId, candidateSha256 }) {
+  const book = bookRoot(root, bookId, false);
+  const tip = runDecision(book, runId);
+  const candidate = findCandidate(book, bookId, runId, candidateSha256 ?? tip?.candidateSha256);
+  need(candidate, 'Select an existing candidate version for review');
   const proof = describeCandidate(root, candidate);
   const { chapter, parentVersion, raw, final, edit, changes, audit } = candidate;
   let editView = null;
   if (edit?.order.kind === 'AUTHOR_REWORK') {
-    const receipt = applyEdit({ prose: checkDelivery({ raw }).prose, ...edit });
+    const receipt = applyEdit({ prose: reworkSource(root, candidate, checkDelivery({ raw }).prose), ...edit });
     editView = { reworkSha256: receipt.reworkSha256, changes: receipt.changes,
       authorFeedback: edit.order.issues.map(({ id, authorNote, categories, diagnosis, preserve, strategy }) =>
         ({ id, authorNote, categories, diagnosis, preserve, strategy })) };
@@ -346,18 +451,91 @@ export function reviewCandidate(root, { bookId, runId }) {
     changes, auditReference: audit?.evidenceRef };
 }
 
-export function approveCanon(root, { bookId, runId, candidateSha256, authorRef, manualDeliveryReviewed = false, authorNotesReviewed = false }) {
+export function selectReworkVersion(root, { bookId, runId, candidateSha256, expectedEventSha256, authorRef }) {
+  need(candidateSha256 === null || (typeof candidateSha256 === 'string' && hex.test(candidateSha256)), 'Select an exact candidate hash');
+  need(typeof authorRef === 'string' && Boolean(authorRef.trim()), 'Explicit author selection reference is required');
+  const book = bookRoot(root, bookId, false);
+  const tip = runDecision(book, runId);
+  need(tip && ['BEGIN_REWORK', 'SELECT', 'CLEAR'].includes(tip.kind) && tip.eventSha256 === expectedEventSha256,
+    'Rework selection changed or the run is closed');
+  if (candidateSha256 === null) {
+    need(tip.kind === 'SELECT', 'There is no author selection to withdraw');
+    const event = recordRunDecision(book, runId, tip, { kind: 'CLEAR', authorRef });
+    return { decision: 'REWORK_SELECTION_WITHDRAWN', eventSha256: event.eventSha256 };
+  }
+  const candidate = findCandidate(book, bookId, runId, candidateSha256);
+  need(candidate, 'Selected candidate version was not saved');
+  const checked = inspectWithQuality(root, candidate, readCanon(root, bookId));
+  need(checked.auditMatches && checked.qualityStatus === 'QUALITY_REVIEW_PRESENT', 'Only a reviewed, unblocked version can be selected for approval');
+  const event = recordRunDecision(book, runId, tip, {
+    kind: 'SELECT', candidateSha256, qualitySha256: checked.qualitySha256, authorRef,
+  });
+  return { decision: 'REWORK_VERSION_SELECTED', candidateSha256, selectionSha256: event.eventSha256 };
+}
+
+function runVersions(book, bookId, runId) {
+  const dir = runDirectory(book, runId, '.versions');
+  const candidates = new Map();
+  const legacy = findCandidate(book, bookId, runId);
+  if (legacy) candidates.set(digest(json(legacy)), legacy);
+  if (fs.existsSync(dir)) for (const file of fs.readdirSync(dir)) {
+    if (!/^[a-f0-9]{64}\.json$/u.test(file)) continue;
+    const sha = file.slice(0, -5);
+    candidates.set(sha, findCandidate(book, bookId, runId, sha));
+  }
+  return candidates;
+}
+
+export function readReworkHistory(root, { bookId, runId, candidateSha256 }) {
+  need(root, 'Set NOVELOS_PRO_VAULT to an existing private Canon directory');
+  const book = bookRoot(root, bookId, false);
+  const versions = runVersions(book, bookId, runId);
+  const tip = runDecision(book, runId);
+  const rounds = new Map();
+  const roundOf = (sha) => {
+    if (rounds.has(sha)) return rounds.get(sha);
+    const candidate = versions.get(sha);
+    need(candidate, 'Rework history is missing a parent');
+    const round = candidate.parentCandidateSha256 ? roundOf(candidate.parentCandidateSha256) + 1 : 0;
+    rounds.set(sha, round);
+    return round;
+  };
+  const entries = [...versions].map(([sha, candidate]) => {
+    const report = storedQuality(root, candidate, sha)?.quality;
+    const inherited = report && parentReviewState(root, candidate);
+    const outdated = inherited && (inherited.needsParentReview
+      || json(report.priorBlockers?.map(({ key }) => key) ?? []) !== json(inherited.pendingParentBlockers));
+    const qualityStatus = !report ? 'QUALITY_REPORT_MISSING' : outdated ? 'AUDIT_REFRESH_REQUIRED'
+      : report.hasBlocker ? 'QUALITY_BLOCKED' : 'QUALITY_REVIEW_PRESENT';
+    return { round: roundOf(sha), candidateSha256: sha, parentCandidateSha256: candidate.parentCandidateSha256 ?? null,
+      finalSha256: digest(candidate.final), qualityStatus };
+  }).sort((a, b) => a.round - b.round || a.candidateSha256.localeCompare(b.candidateSha256));
+  if (candidateSha256 === undefined) return { bookId, runId, decisionHistoryHead: tip, versions: entries };
+  const candidate = versions.get(candidateSha256);
+  need(candidate, 'Requested draft version was not saved');
+  const parent = candidate.parentCandidateSha256 && versions.get(candidate.parentCandidateSha256);
+  if (candidate.parentCandidateSha256) need(parent, 'Rework parent version is missing');
+  const source = parent?.final ?? checkDelivery({ raw: candidate.raw }).prose;
+  const result = candidate.edit ? applyEdit({ prose: source, ...candidate.edit }) : null;
+  const { revised, ...diff } = result ?? {};
+  return { bookId, runId, decisionHistoryHead: tip, ...entries.find((entry) => entry.candidateSha256 === candidateSha256),
+    final: candidate.final, source, diff: result && diff,
+    quality: storedQuality(root, candidate, candidateSha256)?.quality ?? null };
+}
+
+export function approveCanon(root, { bookId, runId, candidateSha256, authorRef, manualDeliveryReviewed = false,
+  authorNotesReviewed = false, selectionSha256 }) {
   need(typeof runId === 'string' && id.test(runId) && hex.test(candidateSha256 ?? ''), 'Invalid approval target');
   need(typeof authorRef === 'string' && !!authorRef.trim(), 'Explicit author approval reference is required');
   const book = bookRoot(root, bookId);
-  const candidate = read(path.join(folder(book, 'runs'), runId + '.json'));
-  need(candidate.bookId === bookId && candidate.runId === runId && digest(json(candidate)) === candidateSha256,
-    'Approval does not match the saved candidate');
+  const candidate = findCandidate(book, bookId, runId, candidateSha256);
+  need(candidate, 'Approval does not match the saved candidate');
   const dir = folder(book, 'snapshots');
   const file = chapterFile(dir, candidate.chapter);
   const existing = () => {
     const winner = snapshot(dir, bookId, candidate.chapter);
     need(winner.candidateSha256 === candidateSha256, 'Concurrent or previously approved different candidate');
+    need(winner.selectionSha256 === selectionSha256, 'Approval selection is stale or missing');
     return { decision: 'ALREADY_APPROVED', chapter: winner.chapter, version: winner.version };
   };
   if (fs.existsSync(file)) return existing();
@@ -368,9 +546,23 @@ export function approveCanon(root, { bookId, runId, candidateSha256, authorRef, 
   need(checked.qualityStatus === 'QUALITY_REVIEW_PRESENT', 'Candidate quality review is missing or blocked: ' + checked.qualityStatus);
   need(!checked.quality.authorNotes.length || authorNotesReviewed === true, 'Author must explicitly review the open quality notes');
   need(!checked.manualDeliveryReviewRequired || manualDeliveryReviewed === true, 'Author must confirm manual completeness review');
+  const tip = runDecision(book, runId);
+  if (tip?.kind === 'CLAIM') {
+    need(tip.candidateSha256 === candidateSha256 && tip.selectionSha256 === selectionSha256
+      && tip.qualitySha256 === checked.qualitySha256 && tip.authorRef === authorRef
+      && tip.manualDeliveryReviewed === manualDeliveryReviewed && tip.authorNotesReviewed === authorNotesReviewed,
+    'Retry must use the same approved selection and author confirmations');
+  } else {
+    need(tip ? tip.kind === 'SELECT' && tip.candidateSha256 === candidateSha256 && tip.eventSha256 === selectionSha256
+      && tip.qualitySha256 === checked.qualitySha256 : selectionSha256 === undefined,
+    'Approval selection is stale or missing');
+    recordRunDecision(book, runId, tip, { kind: 'CLAIM', candidateSha256, selectionSha256,
+      qualitySha256: checked.qualitySha256, authorRef, manualDeliveryReviewed, authorNotesReviewed });
+  }
   const body = { bookId, chapter: candidate.chapter, parentVersion: base.version,
     runId, packetSha256: checked.packetSha256, rawSha256: checked.rawSha256, finalSha256: checked.finalSha256,
     changesSha256: checked.changesSha256, candidateSha256, audit: candidate.audit, qualitySha256: checked.qualitySha256,
+    ...(selectionSha256 && { selectionSha256, parentCandidateSha256: candidate.parentCandidateSha256 ?? null }),
     ...(checked.dependencies && { dependencies: checked.dependencies, evidenceSha256: checked.evidenceSha256 }),
     ...(checked.handoffSha256 && { handoffSha256: checked.handoffSha256, receiptSha256: checked.receiptSha256,
       dueDecisions: checked.dueDecisions, deliveryStatus: checked.deliveryStatus }),
@@ -437,12 +629,17 @@ export function reviewChapterImpact(root, { bookId, sourceChapter, sourceFinalSh
   const runs = folder(book, 'runs', false);
   const staged = [];
   if (fs.existsSync(runs)) {
-    for (const file of fs.readdirSync(runs).filter((name) => name.endsWith('.json') && id.test(name.slice(0, -5)))) {
-      const candidate = read(path.join(runs, file));
-      if (candidate.bookId !== bookId || candidate.chapter !== head.chapter + 1 || candidate.parentVersion !== headVersion) continue;
-      const keys = candidate.handoff?.factKeys ?? candidate.evidenceKeys;
-      staged.push({ chapter: candidate.chapter, runId: candidate.runId, candidateSha256: digest(json(candidate)),
-        ...reviewReasons(candidate.chapter, Array.isArray(keys), keys ?? [], Boolean(candidate.packet.previousTail)) });
+    const runIds = new Set(fs.readdirSync(runs).map((name) => name.replace(/\.(?:json|versions)$/u, ''))
+      .filter((runId) => id.test(runId)));
+    for (const runId of runIds) {
+      for (const [candidateSha256, candidate] of runVersions(book, bookId, runId)) {
+        if (candidate.chapter !== head.chapter + 1 || candidate.parentVersion !== headVersion) continue;
+        const quality = storedQuality(root, candidate, candidateSha256)?.quality;
+        if (!quality || quality.hasBlocker) continue;
+        const keys = candidate.handoff?.factKeys ?? candidate.evidenceKeys;
+        staged.push({ chapter: candidate.chapter, runId, candidateSha256,
+          ...reviewReasons(candidate.chapter, Array.isArray(keys), keys ?? [], Boolean(candidate.packet.previousTail)) });
+      }
     }
   }
   if (readCanon(root, bookId).version !== headVersion) return { decision: 'STALE_BASELINE', bookId };
@@ -452,17 +649,21 @@ export function reviewChapterImpact(root, { bookId, sourceChapter, sourceFinalSh
 
 if (process.argv[1] && pathToFileURL(fs.realpathSync(process.argv[1])).href === import.meta.url) {
   const [action, root, arg, runId, candidateSha256, authorRef, ...flags] = process.argv.slice(2);
-  if (!root || !arg) throw new Error('Usage: node canon.mjs raw|inspect|stage|prepare|receipt|impact <existing-vault> <input.json> | audit <vault> <candidate.json> <quality-report.json> | read <vault> <book-id> | review <vault> <book-id> <run-id> | context <vault> <book-id> [fact-keys...] | approve <vault> <book-id> <run-id> <candidate-sha256> <author-ref> [--manual-delivery-reviewed] [--author-notes-reviewed]');
+  if (!root || !arg) throw new Error('Usage: node canon.mjs raw|inspect|stage|prepare|receipt|impact|rework-save|rework-select <vault> <input.json> | audit <vault> <candidate.json> <quality-report.json> | read <vault> <book-id> | review|rework-history <vault> <book-id> <run-id> [candidate-sha256] | context <vault> <book-id> [fact-keys...] | approve <vault> <book-id> <run-id> <candidate-sha256> <author-ref> [--selection=<sha256>] [--manual-delivery-reviewed] [--author-notes-reviewed]');
   const result = action === 'raw' ? saveRaw(root, read(arg))
     : action === 'prepare' ? prepareChapter(root, read(arg))
     : action === 'receipt' ? saveDeliveryReceipt(root, read(arg))
     : action === 'audit' ? saveQualityReview(root, { candidate: read(arg), report: read(runId) })
     : action === 'impact' ? reviewChapterImpact(root, read(arg))
-    : action === 'review' ? reviewCandidate(root, { bookId: arg, runId })
+    : action === 'review' ? reviewCandidate(root, { bookId: arg, runId, candidateSha256 })
+    : action === 'rework-save' ? saveReworkVersion(root, read(arg))
+    : action === 'rework-history' ? readReworkHistory(root, { bookId: arg, runId, candidateSha256 })
+    : action === 'rework-select' ? selectReworkVersion(root, read(arg))
     : action === 'inspect' ? describeCandidate(root, read(arg))
     : action === 'stage' ? stageCandidate(root, read(arg)) : action === 'read' ? readCanon(root, arg)
       : action === 'context' ? readChapterContext(root, arg, process.argv.slice(5))
     : action === 'approve' ? approveCanon(root, { bookId: arg, runId, candidateSha256, authorRef,
+        selectionSha256: flags.find((flag) => flag.startsWith('--selection='))?.slice('--selection='.length),
         manualDeliveryReviewed: flags.includes('--manual-delivery-reviewed'), authorNotesReviewed: flags.includes('--author-notes-reviewed') }) : null;
   if (!result) throw new Error('Unknown Canon command');
   console.log(json(result).trimEnd());

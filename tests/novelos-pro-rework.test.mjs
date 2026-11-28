@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { applyEdit } from '../NovelOS/tools/pro/workflow.mjs';
 import { planAuthorRework, checkAuthorRework, rollbackAuthorRework } from '../NovelOS/tools/pro/rework.mjs';
-import { describeCandidate, reviewCandidate, saveQualityReview, stageCandidate } from '../NovelOS/tools/pro/canon.mjs';
-import { fixtureQuality } from './fixtures/pro-quality.mjs';
+import { approveCanon, describeCandidate, readCanon, readReworkHistory, reviewCandidate, saveQualityReview,
+  saveReworkVersion, selectReworkVersion, stageCandidate } from '../NovelOS/tools/pro/canon.mjs';
+import { fixtureQuality, stageWithFixtureQuality } from './fixtures/pro-quality.mjs';
 
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const issue = (target, additional = {}) => ({
@@ -80,4 +83,88 @@ test('Canon quality reports bind author feedback, actual diffs and independent r
   assert.equal(review.edit.changes[0].before, '伙计看见了');
   assert.equal(review.edit.changes[0].after, '伙计也看见了');
   assert.equal(review.proof.quality.rework.reworkSha256, applied.reworkSha256);
+});
+
+test('failed versions remain visible; further edits and approval target the exact selected branch', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'novelos-rework-history-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const base = JSON.parse(fs.readFileSync(new URL('../pro/canon-candidate.example.json', import.meta.url), 'utf8'));
+  const { bookId, runId } = base;
+  const target = { bookId, runId };
+  const original = stageWithFixtureQuality(root, base);
+
+  function child(parent, parentCandidateSha256, quote, text) {
+    const { order } = plan(parent.final, [issue({ quote })]);
+    const replacement = { editorRef: 'fixture-editor', patches: [{ id: 'issue-1', text }] };
+    const receipt = applyEdit({ prose: parent.final, order, replacement });
+    const candidate = { ...parent, parentCandidateSha256, edit: { order, replacement }, final: receipt.revised };
+    const proof = describeCandidate(root, candidate);
+    candidate.audit = { ...parent.audit, finalSha256: proof.finalSha256 };
+    const version = saveReworkVersion(root, candidate);
+    return { candidate, version, order, receipt, replacement };
+  }
+  function qualityFor(round) {
+    return { ...fixtureQuality(root, round.candidate), rework: inspection(round.receipt, round.order) };
+  }
+
+  const first = child(base, original.candidateSha256, '伙计看见了', '伙计也看见了');
+  const failed = qualityFor(first);
+  failed.rework.findings[0].decision = 'BLOCK';
+  saveQualityReview(root, { candidate: first.candidate, report: failed });
+  let history = readReworkHistory(root, target);
+  const authorRef = 'offline author fixture';
+  const select = (candidateSha256, expectedEventSha256) =>
+    selectReworkVersion(root, { ...target, candidateSha256, expectedEventSha256, authorRef });
+  const approve = (candidateSha256, selectionSha256) =>
+    approveCanon(root, { ...target, candidateSha256, selectionSha256, authorRef, manualDeliveryReviewed: true });
+  assert.throws(() => select(first.version.candidateSha256, history.decisionHistoryHead.eventSha256), /unblocked version/);
+  assert.throws(() => approve(original.candidateSha256), /selection is stale or missing/);
+
+  const second = child(first.candidate, first.version.candidateSha256, '伙计也看见了', '伙计在旁看见了');
+  const competing = child(first.candidate, first.version.candidateSha256, '伙计也看见了', '伙计亲眼看见了');
+  const quality = qualityFor(second);
+  assert.throws(() => saveQualityReview(root, { candidate: second.candidate, report: quality }), /parent version blockers/);
+  const keys = describeCandidate(root, second.candidate).pendingParentBlockers;
+  assert.deepEqual(keys, [first.version.candidateSha256 + '/rework:issue-1']);
+  quality.priorBlockers = keys.map((key) => ({ key, decision: 'PASS', quote: '伙计在旁看见了', note: '离线逐项复查。' }));
+  saveQualityReview(root, { candidate: second.candidate, report: quality });
+  history = readReworkHistory(root, target);
+  assert.equal(history.versions.length, 4);
+  assert.deepEqual(history.versions.map(({ round }) => round), [0, 1, 2, 2]);
+  assert.equal(history.versions.find((v) => v.candidateSha256 === first.version.candidateSha256).qualityStatus, 'QUALITY_BLOCKED');
+  assert.equal(history.versions.find((v) => v.candidateSha256 === competing.version.candidateSha256).qualityStatus, 'QUALITY_REPORT_MISSING');
+  const saved = readReworkHistory(root, { ...target, candidateSha256: second.version.candidateSha256 });
+  assert.equal(saved.source, first.candidate.final);
+  assert.equal(saved.diff.changes[0].before, '伙计也看见了');
+  assert.equal(saved.diff.changes[0].after, '伙计在旁看见了');
+  assert.equal(rollbackAuthorRework({ revised: saved.final, receipt: saved.diff }).original, first.candidate.final);
+
+  const selectedOriginal = select(original.candidateSha256, history.decisionHistoryHead.eventSha256);
+  const selectedSecond = select(second.version.candidateSha256, selectedOriginal.selectionSha256);
+  assert.throws(() => select(original.candidateSha256, selectedOriginal.selectionSha256), /selection changed/);
+  assert.throws(() => approve(original.candidateSha256, selectedOriginal.selectionSha256), /selection is stale/);
+  assert.throws(() => approve(second.version.candidateSha256, selectedOriginal.selectionSha256), /selection is stale/);
+  const rolledBack = select(original.candidateSha256, selectedSecond.selectionSha256);
+  assert.equal(reviewCandidate(root, target).final, base.final);
+  assert.throws(() => approve(original.candidateSha256, selectedOriginal.selectionSha256), /selection is stale/);
+  const withdrawn = select(null, rolledBack.selectionSha256);
+  assert.equal(withdrawn.decision, 'REWORK_SELECTION_WITHDRAWN');
+  assert.throws(() => approve(original.candidateSha256, rolledBack.selectionSha256), /selection is stale/);
+  const cli = fileURLToPath(new URL('../NovelOS/tools/pro/canon.mjs', import.meta.url));
+  const race = (candidateSha256, index) => new Promise((resolve, reject) => {
+    const file = path.join(root, 'selection-' + index + '.json');
+    fs.writeFileSync(file, JSON.stringify({ ...target, candidateSha256, expectedEventSha256: withdrawn.eventSha256, authorRef }));
+    const processHandle = spawn(process.execPath, [cli, 'rework-select', root, file], { stdio: 'ignore' });
+    processHandle.on('error', reject);
+    processHandle.on('exit', resolve);
+  });
+  const results = await Promise.all([race(original.candidateSha256, 1), race(second.version.candidateSha256, 2)]);
+  assert.deepEqual(results.sort(), [0, 1]);
+  const finalSelection = select(second.version.candidateSha256, readReworkHistory(root, target).decisionHistoryHead.eventSha256);
+  assert.equal(reviewCandidate(root, target).edit.changes[0].before, '伙计也看见了');
+  assert.equal(approve(second.version.candidateSha256, finalSelection.selectionSha256).decision, 'CANON_APPROVED');
+  assert.equal(approve(second.version.candidateSha256, finalSelection.selectionSha256).decision, 'ALREADY_APPROVED');
+  assert.equal(readCanon(root, bookId).final, saved.final);
+  assert.equal(readReworkHistory(root, { ...target, candidateSha256: original.candidateSha256 }).final, base.final);
+  assert.throws(() => select(original.candidateSha256, selectedSecond.selectionSha256), /run is closed/);
 });

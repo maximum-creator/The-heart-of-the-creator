@@ -18,3 +18,10 @@
 4. 小说候选的 `edit` 保存准确的 `order` 和 `replacement`，`quality.rework` 所用的输入交报告的 `rework` 字段。终审显示原话、原因、保护项和前后差异；阻断项暂停暂存，争议由作者确认。剧本把修后稿交回对应作品验收，沿用旧稿哈希会失效。
 
 用 `node NovelOS/tools/pro/rework.mjs plan|apply|check|rollback <input.json>` 可以离线运行。回退输入为 `{ revised, receipt }`，`receipt` 用原样的 apply 回执。只有当前改稿和回执的哈希一致，才会返回逐字原稿。工具不落盘、不覆盖作者稿。已批准旧章要通过旧章影响预览和正式审批；回退草稿不会更改已批准设定。
+
+## 同一写作运行的后续返工
+
+1. 用 `canon.mjs rework-save <vault> <本轮候选.json>` 把待审稿或失败稿留在同一 runId 下。第一版也可来自原先已暂存的候选。终稿未定时先归档，再登记独立复审报告。审核无法通过的版本依然可查看；越界、错版本或结构无效的补丁不会登记成候选稿。
+2. 用 `canon.mjs rework-history <vault> <bookId> <runId> [候选哈希]` 或只读 MCP 查看版本链。指定哈希可看到该版全文、上一版正文、这轮改动及复审。再点段时从这一版的 final 取引文。新候选填 `parentCandidateSha256`，沿用同一章包、运行编号和逐字原稿。旧轮的问题继续留在终审，父轮的阻断项或待裁决项由后续报告 `priorBlockers` 逐条给 key、decision、quote 和 note。若改后稿的父轮尚无复审，先补父轮判断。
+3. 回退时可以读取任一旧版继续返工，也可以重新选择有质量报告且无阻断项的旧版。用 `canon.mjs rework-select <vault> <选择记录.json>`，文件含 `bookId`、`runId`、`candidateSha256`、`authorRef` 和 `expectedEventSha256`，最后一项取版本目录的 `decisionHistoryHead.eventSha256`。如果你已经选过一版、看完又决定继续改，把 `candidateSha256` 写为 null 就能撤回该选择，旧凭据随即失效。
+4. 终审通过后，用 `canon.mjs approve <vault> <bookId> <runId> <候选哈希> <作者记录> --selection=<本次selectionSha256>`。缺上游回执或有待裁决意见时再分别加现有人工确认开关。改选会产生新的选择凭据，同一候选重新选中也需要使用新凭据。批准发布中断后以相同凭据和确认信息重试；正式快照发布后，所有草稿与复审仍可读。

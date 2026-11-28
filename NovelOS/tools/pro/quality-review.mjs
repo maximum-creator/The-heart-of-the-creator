@@ -6,7 +6,20 @@ const decisions = ['PASS', 'AUTHOR_REVIEW', 'BLOCK'];
 const fail = (message) => { throw new Error(message); };
 const text = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.length <= max;
 
-export function validateQualityReview(candidate, dependencies, report) {
+export function openReviewKeys(quality, candidateSha256) {
+  const open = ({ decision }) => decision !== 'PASS';
+  const current = [
+    ...quality.checks.filter(open).map(({ aspect }) => 'check:' + aspect),
+    ...quality.inherited.filter(open).map(({ key }) => 'inherited:' + key),
+    ...quality.stateChanges.filter(open).map(({ key }) => 'change:' + key),
+    ...(quality.reading && open(quality.reading) ? ['reading'] : []),
+    ...(quality.rework?.findings ?? []).filter(open).map(({ id }) => 'rework:' + id),
+  ];
+  return [...current.map((key) => candidateSha256 + '/' + key),
+    ...(quality.priorBlockers ?? []).filter(open).map(({ key }) => key)];
+}
+
+export function validateQualityReview(candidate, dependencies, report, editSource, pendingParentBlockers = []) {
   const locate = (quote) => {
     const index = text(quote, 320) && quote.trim().length >= 4 ? candidate.final.indexOf(quote) : -1;
     if (index < 0) {
@@ -15,7 +28,7 @@ export function validateQualityReview(candidate, dependencies, report) {
     if (candidate.final.indexOf(quote, index + 1) !== -1) fail('Quality review quote must uniquely locate the passage');
     return { quote, line: candidate.final.slice(0, index).split('\n').length };
   };
-  const { reviewer, checks, inherited, stateChanges, reading, rework } = report ?? {};
+  const { reviewer, checks, inherited, stateChanges, reading, rework, priorBlockers } = report ?? {};
   if (!text(reviewer, 100) || !Array.isArray(checks) || checks.length !== aspects.length
     || new Set(checks.map((check) => check?.aspect)).size !== aspects.length) fail('Incomplete continuity review');
   function reviewItem(item) {
@@ -59,10 +72,12 @@ export function validateQualityReview(candidate, dependencies, report) {
       keep: { ...locate(reading.keep.quote), note: reading.keep.note } };
   }
   const reworkReview = candidate.edit?.order?.kind === 'AUTHOR_REWORK'
-    ? checkAuthorRework({ prose: checkDelivery({ raw: candidate.raw }).prose, ...candidate.edit, report: rework }) : null;
-  const judgments = [...checked, ...inheritedReview, ...changeReview, ...(readerReview ? [readerReview] : []), ...(reworkReview?.findings ?? [])];
+    ? checkAuthorRework({ prose: editSource ?? checkDelivery({ raw: candidate.raw }).prose, ...candidate.edit, report: rework }) : null;
+  const reopened = coverage(priorBlockers ?? [], pendingParentBlockers, 'parent version blockers', (item) => locate(item.quote));
+  const judgments = [...checked, ...inheritedReview, ...changeReview, ...(readerReview ? [readerReview] : []),
+    ...(reworkReview?.findings ?? []), ...reopened];
   const hasBlocker = judgments.some((item) => item.decision === 'BLOCK');
   const authorNotes = judgments.filter((item) => item.decision === 'AUTHOR_REVIEW');
   return { reviewer, checks: checked, inherited: inheritedReview, stateChanges: changeReview, reading: readerReview,
-    ...(reworkReview && { rework: reworkReview }), hasBlocker, authorNotes };
+    ...(reworkReview && { rework: reworkReview }), ...(reopened.length && { priorBlockers: reopened }), hasBlocker, authorNotes };
 }
